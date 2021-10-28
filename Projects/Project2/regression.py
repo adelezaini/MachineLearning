@@ -99,7 +99,7 @@ class LinearRegression:
         
         Returns X*beta
         """
-        return self.X @ self.beta
+        return X @ self.beta
         
     def predict_train(self):
         return self.predict(self.X_train)
@@ -111,6 +111,9 @@ class LinearRegression:
         beta = self.beta
         beta[0] = self.intercept
         return X @ beta
+        
+    def print(self,q):
+        print(q)
     
     def MSE_train(self, prec=4):
         return np.round(MSE(self.y_train,self.predict_train()),prec)
