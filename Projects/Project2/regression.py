@@ -19,7 +19,7 @@ from random import random, seed
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import SGDRegressor, Lasso
+import sklearn.linear_model as sk #import SGDRegressor, Lasso, LinearRegression, Ridge
 from dataset import train_test_rescale
 from misc import MSE, R2
 from algorithm import SVDinv, SGD, GD
@@ -74,7 +74,7 @@ class LinearRegression:
         self.beta = self.solver(self.X_train, self.y_train, self.lmd)
         return self.beta
     
-    def fit_SK(self):
+    def fit_SK(self): # to be tested
         """Fit the model and return beta-values, using Scikit-Learn"""
         raise NotImplementedError("Method LinearRegression.fit_SK is abstract and cannot be called")
         
@@ -155,18 +155,18 @@ class OLSRegression(LinearRegression):
         return 2.0/np.shape(X)[0] * X.T @ ((X @ beta) - y)  # X.shape[0]=number of input (training) data
         
     def fit_SK(self):
-        self.beta = SVDinv(self.X_train.T @ self.X_train) @ self.X_train.T @ self.y_train
+        degree = np.shape(self.X_train)[1] - 1
+        model = make_pipeline(PolynomialFeatures(degree = degree), sk.LinearRegression(fit_intercept=False))
+        self.beta = model.fit(self.X_train, self.y_train)
         return self.beta
         
-    def fitSGD_SK(self):
-        """
-        sgdreg = SGDRegressor(max_iter = 50, penalty=None, eta0=0.1, fit_intercept=False)
+    def fitSGD_SK(self, eta0=0.01, alpha = 0.001, max_iter = 500, penalty=None):
+        """Stochastic Gredient Descent provided by Scikit Learn"""
+        sgdreg = sk.SGDRegressor(eta0=eta0, alpha = alpha, max_iter = max_iter, penalty = penalty, fit_intercept=False)
         sgdreg.fit(self.X_train,self.y_train)
         self.beta = sgdreg.coef_
         if self.scale:
             self.beta[0] = sgdreg.intercept_
-        
-        """
         return self.beta
         
         
@@ -181,28 +181,27 @@ class RidgeRegression(LinearRegression):
         
     def solver(self, X, y, lmd = 0, svd = False):
         if not svd:
-            return np.linalg.pinv(X.T @ X + lmd * np.eye(len(self.X.T))) @ X.T @ y
+            return np.linalg.pinv(X.T @ X + lmd * np.eye(len(X.T))) @ X.T @ y
         else:
             return SVDinv(X.T @ X + lmd * np.eye(len(self.X.T))) @ X.T @ y
         
     def fit_SK(self):
-        #self.beta = SVDinv(self.X_train.T @ self.X_train) @ self.X_train.T @ self.y_train
+        Ridge = sk.Ridge(self.lmb,fit_intercept=False)
+        Ridge.fit(self.X_train, self.y_train)
+        self.beta = Ridge.coef_
+        if self.scale:
+            self.beta[0] = Ridge.intercept_
         return self.beta
         
-    def gradient(self, X, y, beta, lmd):
-        return #2.0/X.shape[0] * X.T @ ((X @ beta) - y) # X.shape[0]=number of input (training) data
-
+    def gradient(self, X, y, beta, lmd=0):
+        return 2.0/np.shape(X)[0] * X.T @ ((X @ beta) - y) - 2. * lmd * beta  # X.shape[0]=number of input (training) data
+        
         
     def fitSGD_SK(self):
-        """
-        sgdreg = SGDRegressor(max_iter = 50, penalty=None, eta0=0.1)
-        sgdreg.fit(x,y.ravel())
-        self.beta = np.append(sgdreg.intercept_, sgdreg.coef_).reshape([self.X_train.shape[1],1])
-        """
-        return self.beta
+        pass
       
 
-class LassoRegression(LinearRegression):
+class LassoRegression(LinearRegression):  # to be tested
 
     def __init__(self, X, y, lmd = 1e-12):
         super().__init__(X, y)
@@ -212,48 +211,16 @@ class LassoRegression(LinearRegression):
         self.lmd=lmd
         
     def solver(self, X, y, lmd = 0, svd = False):
-        self.Lasso = linear_model.Lasso(lmd)
-        return Lasso.fit(X, y)
+        self.Lasso = sk.Lasso(lmd)
+        self.beta = self.Lasso.coef_
+        if self.scale:
+            self.beta[0] = self.Lasso.intercept_
+        return self.beta
         
     def gradient(self, X, y, beta, lmd):
         pass
         
     def predict(self, X):
         return self.Lasso.predict(X)
-        
-    """
-    def fit_SK(self):
-        return self.fit()
-        
-    def fitGD(self):
-        return self.fit()
-        
-    def fitSGD(self):
-        return self.fit()
-        
-    def gradient(X, y, beta):
-        return 2.0/X.shape[0] * X.T @ ((X @ beta) - y) # X.shape[0]=number of input (training) data
-            
-    def fitGD(self, eta = 0.1, Niterations = 1000):
-                
-        self.beta = GD(self.X_train, self.y_train, gradient=self.gradient, eta = eta, Niterations = Niterations)
-        
-        return self.beta
-    
-    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50):
-          
-        self.beta = SGD(X = self.X_train, y = self.y_train, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
-        
-        return self.beta
-        
-    def fitSGD_SK(self):
-    
-        sgdreg = SGDRegressor(max_iter = 50, penalty=None, eta0=0.1)
-        sgdreg.fit(x,y.ravel())
-        self.beta = np.append(sgdreg.intercept_, sgdreg.coef_).reshape([self.X_train.shape[1],1])
-        
-        return self.beta
-    """
-    
 
 
