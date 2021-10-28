@@ -26,11 +26,11 @@ from sklearn.preprocessing import StandardScaler
 
 def FrankeFunction(x,y):
     """Evaluate the Franke Function: a two-variables function to create the dataset of vanilla problems"""
-	term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
-	term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
-	term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
-	term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
-	return term1 + term2 + term3 + term4
+    term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
+    term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
+    term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
+    term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
+    return term1 + term2 + term3 + term4
  
 def Plot_FrankeFunction(x,y,z, title="Dataset"):
     """3D plot, suitable for plotting the Franke Function"""
@@ -77,20 +77,20 @@ def create_xyz_dataset(n, mu, sigma):
 
 def create_X(x, y, n):
     """Design matrix for two indipendent variables x,y"""
-	if len(x.shape) > 1:
-		x = np.ravel(x)
-		y = np.ravel(y)
+    if len(x.shape) > 1:
+        x = np.ravel(x)
+        y = np.ravel(y)
 
-	N = len(x)
-	l = int((n+1)*(n+2)/2)		# Number of elements in beta, number of feutures (degree of polynomial)
-	X = np.ones((N,l))
+    N = len(x)
+    l = int((n+1)*(n+2)/2)		# Number of elements in beta, number of feutures (degree of polynomial)
+    X = np.ones((N,l))
 
-	for i in range(1,n+1):
-		q = int((i)*(i+1)/2)
-		for k in range(i+1):
-			X[:,q+k] = (x**(i-k))*(y**k)
+    for i in range(1,n+1):
+        q = int((i)*(i+1)/2)
+        for k in range(i+1):
+            X[:,q+k] = (x**(i-k))*(y**k)
 
-	return X
+    return X
 
 def scale_Xz(X_train, X_test, z_train, z_test, with_std=False):
     scaler_X = StandardScaler(with_std=with_std) #with_std=False

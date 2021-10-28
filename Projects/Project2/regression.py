@@ -19,7 +19,7 @@ from random import random, seed
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import SGDRegressor
+from sklearn.linear_model import SGDRegressor, Lasso
 
 
 # Error analysis
@@ -82,7 +82,7 @@ def SVDinv(A):
     return np.matmul(V,np.matmul(D.T,UT))
     
     
-def GD(X, y, gradient, eta = 0.1, Niterations = 1000):
+def GD(X, y, lmd, gradient, eta = 0.1, Niterations = 1000):
     """Gradient Descent Algorithm
     
         Args:
@@ -94,10 +94,10 @@ def GD(X, y, gradient, eta = 0.1, Niterations = 1000):
         
         Returns:
         beta/theta-values"""
-    theta = np.random.randn(X.shape[1],1)
+    theta = np.random.randn(X.shape[1])
 
     for iter in range(Niterations):
-        gradients = grandient(X, y, theta) #2.0/X.shape[0] * X.T @ ((X @ beta) - y)
+        gradients = gradient(X, y, theta, lmd) #2.0/X.shape[0] * X.T @ ((X @ theta) - y) #
         theta -= eta*gradients
         
     return theta
@@ -106,7 +106,7 @@ def GD(X, y, gradient, eta = 0.1, Niterations = 1000):
 def learning_schedule(t, t0=5, t1=50):
     return t0/(t+t1)
     
-def SGD(X,y, gradient, n_epochs, m, t0=5, t=50):
+def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50):
     """Stochastic Gradient Descent Algorithm
     
         Args:
@@ -121,14 +121,14 @@ def SGD(X,y, gradient, n_epochs, m, t0=5, t=50):
         Returns:
         beta/theta-values"""
         
-    theta = np.random.randn(X.shape[1],1)
+    theta = np.random.randn(X.shape[1])
     
     for epoch in range(n_epochs):
         for i in range(m):
             random_index = np.random.randint(m)
             Xi = X[random_index:random_index+1]
             yi = y[random_index:random_index+1]
-            gradients = gradient(Xi, yi, theta) * X.shape[0] #2.0 * Xi.T @ ((Xi @ theta)-yi)
+            gradients = gradient(Xi, yi, theta, lmd) #* X.shape[0] #2.0 * Xi.T @ ((Xi @ theta)-yi)
             eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
             theta = theta - eta*gradients
             
@@ -156,11 +156,11 @@ class LinearRegression:
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=test_size)
         
         # set parameters automaticaly after splitting
-        self.intercept = self.solver(X_train, y_train)[0]
-        self.mean = np.mean(y_train)
-        self.std = np.std(y_train)
-        self.y_max = np.max(y_train)
-        self.y_min = np.min(y_train)
+        self.intercept = self.solver(self.X_train, self.y_train)[0]
+        self.mean = np.mean(self.y_train)
+        self.std = np.std(self.y_train)
+        self.y_max = np.max(self.y_train)
+        self.y_min = np.min(self.y_train)
         
         return self
             
@@ -171,29 +171,32 @@ class LinearRegression:
         
         return self
         
-    def solver(self, X, y, lmb):
+    def solver(self, X, y, lmd, svd = False):
         """Regressione equation"""
         raise NotImplementedError("Method LinearRegression.solver is abstract and cannot be called")
+        
+    def gradient(self, X, y, beta, lmd):
+        """Gradient equation"""
+        raise NotImplementedError("Method LinearRegression.gradient is abstract and cannot be called")
     
     def fit(self):
         """Fit the model and return beta-values"""
-        raise NotImplementedError("Method LinearRegression.fit is abstract and cannot be called")
-        
-    def fitSVD(self):
-        """Fit the model and return beta-values, using SVD theorem to evalute the inverse of the matrix"""
-        raise NotImplementedError("Method LinearRegression.fitSVD is abstract and cannot be called")
-        
+        self.beta = self.solver(self.X_train, self.y_train, self.lmd)
+        return self.beta
+    
     def fit_SK(self):
         """Fit the model and return beta-values, using Scikit-Learn"""
         raise NotImplementedError("Method LinearRegression.fit_SK is abstract and cannot be called")
         
-    def fitGD(self):
+    def fitGD(self, eta = 0.1, Niterations = 1000):
         """Fit the model and return beta-values, using the Gradient Descent"""
-        raise NotImplementedError("Method LinearRegression.fitGD is abstract and cannot be called")
+        self.beta = GD(self.X_train, self.y_train, lmd=self.lmd, gradient=self.gradient, eta = eta, Niterations = Niterations)
+        return self.beta
     
-    def fitSGD(self):
+    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50):
         """Fit the model and return beta-values, using the Stochastic Gradient Descent"""
-        raise NotImplementedError("Method LinearRegression.fitSGD is abstract and cannot be called")
+        self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
+        return self.beta
         
     def get_param(self):
         return self.beta
@@ -245,51 +248,24 @@ class LinearRegression:
         display(np.round(ci_df,3))
         return ci1, ci2
         
-"""
-    def predict(self, X):
-        Fit the model and return the prediction
-        
-        Args:
-        X (array): design matrix
-
-        Returns X*beta
-        
-        raise NotImplementedError("Method LinearRegression.predict is abstract and cannot be called")
-"""
 
 class OLSRegression(LinearRegression):
     
     def __init__(self, X, y):
+        self.lmd = 0
         super().__init__(X, y)
         
-    def solver(self, X, y, lmb = 0):
-        return np.linalg.pinv(X.T @ X) @ X.T @ y
+    def solver(self, X, y, lmd = 0, svd = False):
+        if not svd:
+            return np.linalg.pinv(X.T @ X) @ X.T @ y
+        else:
+            return SVDinv(X.T @ X) @ X.T @ y
         
-    def fit(self):
-        self.beta = self.solver(self.X_train, self.y_train)
-        return self.beta
-        
-    def fitSVD(self):
-        self.beta = SVDinv(self.X_train.T @ self.X_train) @ self.X_train.T @ self.y_train
-        return self.beta
+    def gradient(self, X, y, beta, lmd=0):
+        return 2.0/np.shape(X)[0] * X.T @ ((X @ beta) - y)  # X.shape[0]=number of input (training) data
         
     def fit_SK(self):
         self.beta = SVDinv(self.X_train.T @ self.X_train) @ self.X_train.T @ self.y_train
-        return self.beta
-        
-    def gradient(X, y, beta):
-        return 2.0/X.shape[0] * X.T @ ((X @ beta) - y) # X.shape[0]=number of input (training) data
-            
-    def fitGD(self, eta = 0.1, Niterations = 1000):
-                
-        self.beta = GD(self.X_train, self.y_train, gradient=self.gradient, eta = eta, Niterations = Niterations)
-        
-        return self.beta
-    
-    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50):
-          
-        self.beta = SGD(X = self.X_train, y = self.y_train, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
-        
         return self.beta
         
     def fitSGD_SK(self):
@@ -306,42 +282,26 @@ class OLSRegression(LinearRegression):
         
 class RidgeRegression(LinearRegression):
     
-    def __init__(self, X, y, lmb = 1e-12):
+    def __init__(self, X, y, lmd = 1e-12):
         super().__init__(X, y)
         self.lmd = lmd
         
-    def set_lambda(self, lmb):
-        self.lmb=lmb
+    def set_lambda(self, lmd):
+        self.lmd=lmd
         
-    def solver(self, X, y, lmd):
-        return np.linalg.pinv(X.T @ X + lmd * np.eye(len(self.X.T))) @ X.T @ y
-        
-    def fit(self):
-        self.beta = self.solver(self.X_train, self.y_train, self.lmb)
-        return self.beta
-        
-    def fitSVD(self):
-        self.beta = SVDinv(self.X_train.T @ self.X_train + self.lmd * np.eye(len(self.X_train.T))) @ self.X_train.T @ self.y_train
-        return self.beta
+    def solver(self, X, y, lmd = 0, svd = False):
+        if not svd:
+            return np.linalg.pinv(X.T @ X + lmd * np.eye(len(self.X.T))) @ X.T @ y
+        else:
+            return SVDinv(X.T @ X + lmd * np.eye(len(self.X.T))) @ X.T @ y
         
     def fit_SK(self):
         #self.beta = SVDinv(self.X_train.T @ self.X_train) @ self.X_train.T @ self.y_train
         return self.beta
         
-    def gradient(X, y, beta):
+    def gradient(self, X, y, beta, lmd):
         return #2.0/X.shape[0] * X.T @ ((X @ beta) - y) # X.shape[0]=number of input (training) data
-            
-    def fitGD(self, eta = 0.1, Niterations = 1000):
-                
-        self.beta = GD(self.X_train, self.y_train, gradient=self.gradient, eta = eta, Niterations = Niterations)
-        
-        return self.beta
-    
-    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50):
-          
-        self.beta = SGD(X = self.X_train, y = self.y_train, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
-        
-        return self.beta
+
         
     def fitSGD_SK(self):
         """
@@ -354,25 +314,22 @@ class RidgeRegression(LinearRegression):
 
 class LassoRegression(LinearRegression):
 
-    def __init__(self, X, y, lmb = 1e-12):
+    def __init__(self, X, y, lmd = 1e-12):
         super().__init__(X, y)
         self.lmd = lmd
         
-    def set_lambda(self, lmb):
-        self.lmb=lmb
-    
-    def fit(self):
-        RegLasso = linear_model.Lasso(self.lmd)
-        self.beta = RegLasso.fit(self.X_train,self.y_train)
-        return self.beta
+    def set_lambda(self, lmd):
+        self.lmd=lmd
         
-    def solver(self, X, y, lmd):
-        RegLasso = linear_model.Lasso(lmd)
-        return RegLasso.fit(X, y)
+    def solver(self, X, y, lmd = 0, svd = False):
+        self.Lasso = linear_model.Lasso(lmd)
+        return Lasso.fit(X, y)
         
-    def fit(self):
-        self.beta = self.solver(self.X_train, self.y_train, self.lmb)
-        return self.beta
+    def gradient(self, X, y, beta, lmd):
+        pass
+        
+    def predict(self, X):
+        return self.Lasso.predict(X)
         
     """
     def fit_SK(self):
@@ -441,6 +398,11 @@ def lasso_reg(X_train, X_test, y_train, y_test, lmd = 10**(-12)):
     y_predict = RegLasso.predict(X_test)
 
     return y_model, y_predict
+"""
+"""
+    def fit(self):
+        raise NotImplementedError("Method LinearRegression.fit is abstract and cannot be called")
+        
 """
 
 # Return the rolling mean of a vector and two values at one sigma from the rolling average
