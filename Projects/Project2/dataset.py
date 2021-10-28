@@ -92,26 +92,23 @@ def create_X(x, y, n):
 
     return X
 
-def scale_Xz(X_train, X_test, z_train, z_test, with_std=False):
-    scaler_X = StandardScaler(with_std=with_std) #with_std=False
+def train_test_rescale(X_train, X_test, y_train, y_test, with_std=False):
+    """Rescale train and test data using StandardScaler().
+    The standard deviation correction is not applied by default.
+    It's the analogous of train_test_split() by sklearn"""
+    
+    if len(y_train.shape) > 1:
+        print("You forgot to ravel your outputs! \n Automatically ravelled in train_test_rescale()")
+        y_train = np.ravel(y_train)
+        y_test = np.ravel(y_test)
+    
+    scaler_X = StandardScaler(with_std=with_std)
     scaler_X.fit(X_train)
     X_train = scaler_X.transform(X_train)
     X_test = scaler_X.transform(X_test)
 
-    scaler_z = StandardScaler(with_std=with_std) #with_std=False
-    z_train = np.squeeze(scaler_z.fit_transform(z_train.reshape(-1, 1))) #scaler_z.fit_transform(z_train) #
-    z_test = np.squeeze(scaler_z.transform(z_test.reshape(-1, 1))) #scaler_z.transform(z_test) #  
-    return X_train, X_test, z_train, z_test
-
-# Splitting and rescaling data (rescaling is optional)
-# Default values: 20% of test data and the scaler is StandardScaler without std.dev.
-def Split_and_Scale(X,z,test_size=0.2, scale=True, with_std=False):
-
-    #Splitting training and test data
-    X_train, X_test, z_train, z_test = train_test_split(X, z, test_size=test_size)
-
-    # Rescaling X and z (optional)
-    if scale:
-        X_train, X_test, z_train, z_test = scale_Xz(X_train, X_test, z_train, z_test, with_std=with_std)
-      
-    return X_train, X_test, z_train, z_test
+    scaler_y = StandardScaler(with_std=with_std)
+    y_train = np.squeeze(scaler_y.fit_transform(y_train.reshape(-1, 1))) #scaler_y.fit_transform(y_train) #
+    y_test = np.squeeze(scaler_y.transform(y_test.reshape(-1, 1))) #scaler_y.transform(y_test) #
+    
+    return X_train, X_test, y_train, y_test
