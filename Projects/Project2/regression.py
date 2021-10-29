@@ -23,8 +23,11 @@ import sklearn.linear_model as sk #import SGDRegressor, Lasso, LinearRegression,
 from dataset import train_test_rescale
 from misc import MSE, R2
 from algorithm import SVDinv, SGD, GD
+from sklearn.utils import resample
     
-    
+def MSE_BS(y_pred_matrix, y_data):
+    return np.mean( np.mean((y_data.reshape(-1,1) - y_pred_matrix)**2, axis=1, keepdims=True) )
+        
 class LinearRegression:
     """A class that gathers OLS, Ridge, Lasso methods
 
@@ -87,6 +90,25 @@ class LinearRegression:
         """Fit the model and return beta-values, using the Stochastic Gradient Descent"""
         self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
         return self.beta
+        
+    def predictSGD_BS(self, n_epochs, m, t0 = 5, t1 = 50, n_boostraps=100):
+        """Predict y
+        The Stochastic Gradient Descent and Bootstrap esampling algorithm are implemented
+        
+        Returns:
+        (m x n_bootstraps) matrix with the column vectors y_pred for each bootstrap iteration.
+        """
+        y_pred_boot = np.empty((self.y_test.shape[0], n_boostraps))
+        for i in range(n_boostraps):
+            # Draw a sample of our dataset
+            X_sample, y_sample = resample(self.X_train, self.y_train)
+            # Perform OLS equation
+            beta = SGD(X = X_sample, y = y_sample, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
+            y_pred = self.X_test @ beta
+            y_pred_boot[:, i] = y_pred.ravel()
+
+        return y_pred_boot
+    
         
     def get_param(self):
         return self.beta
@@ -198,7 +220,6 @@ class RidgeRegression(LinearRegression):
         
     def gradient(self, X, y, beta, lmd=0):
         return 2.0/np.shape(X)[0] * X.T @ ((X @ beta) - y) - 2. * lmd * beta  # X.shape[0]=number of input (training) data
-        
         
     def fitSGD_SK(self):
         pass

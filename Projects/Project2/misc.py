@@ -26,7 +26,10 @@ def MSE(y_data,y_model):
     n = np.size(y_model)
     return np.sum((y_data-y_model)**2)/n
 
-
+def find_min_indexes(A):
+    return np.array(np.where(A == A.min())).flatten()
+    
+    
 def Rolling_Mean(vector, windows=3):
     """Evaluate the rolling mean of a vector
     
