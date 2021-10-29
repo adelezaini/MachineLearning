@@ -27,8 +27,16 @@ def MSE(y_data,y_model):
     return np.sum((y_data-y_model)**2)/n
 
 
-# Return the rolling mean of a vector and two values at one sigma from the rolling average
 def Rolling_Mean(vector, windows=3):
+    """Evaluate the rolling mean of a vector
+    
+    Args:
+    vector (array): input vector to evaluate the rolling mean
+    window (int): integer indicating how many sequential datapoints to include in the rolling mean
+    
+    Returns:
+    rolling mean of the given vector and two values at one sigma from the rolling average
+    """
     vector_df = pd.DataFrame({'vector': vector})
     # computing the rolling average
     rolling_mean = vector_df.vector.rolling(windows).mean().to_numpy()
