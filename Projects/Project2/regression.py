@@ -109,8 +109,8 @@ class LinearRegression:
 
         return y_pred_boot
     
-        
     def get_param(self):
+        """Return beta-values"""
         return self.beta
     
     def predict(self, X):
@@ -209,6 +209,9 @@ class RidgeRegression(LinearRegression):
             return np.linalg.pinv(X.T @ X + lmd * np.eye(len(X.T))) @ X.T @ y
         else:
             return SVDinv(X.T @ X + lmd * np.eye(len(self.X.T))) @ X.T @ y
+            
+    def gradient(self, X, y, beta, lmd=0):
+        return 2.0/np.shape(X)[0] * X.T @ ((X @ beta) - y) - 2. * lmd * beta  # X.shape[0]=number of input (training) data
         
     def fit_SK(self):
         Ridge = sk.Ridge(self.lmb,fit_intercept=False)
@@ -217,9 +220,6 @@ class RidgeRegression(LinearRegression):
         if self.scale:
             self.beta[0] = Ridge.intercept_
         return self.beta
-        
-    def gradient(self, X, y, beta, lmd=0):
-        return 2.0/np.shape(X)[0] * X.T @ ((X @ beta) - y) - 2. * lmd * beta  # X.shape[0]=number of input (training) data
         
     def fitSGD_SK(self):
         pass
