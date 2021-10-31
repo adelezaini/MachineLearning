@@ -86,9 +86,9 @@ class LinearRegression:
         self.beta = GD(self.X_train, self.y_train, lmd=self.lmd, gradient=self.gradient, eta = eta, Niterations = Niterations)
         return self.beta
     
-    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50, momentum = 0.):
+    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50, opt = "sgd", momentum = 0.):
         """Fit the model and return beta-values, using the Stochastic Gradient Descent"""
-        self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1, momentum = momentum )
+        self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1, opt = opt, momentum = momentum )
         return self.beta
         
     def predictSGD_BS(self, n_epochs, m, t0 = 5, t1 = 50, n_boostraps=100):
