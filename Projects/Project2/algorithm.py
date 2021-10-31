@@ -46,7 +46,9 @@ def SVDinv(A):
     V = np.transpose(VT)
     return np.matmul(V,np.matmul(D.T,UT))
     
-    
+
+optimizers = ["sgd", "adagrad", "rms", "adam"]
+
 def GD(X, y, lmd, gradient, eta = 0.1, Niterations = 1000):
     """Gradient Descent Algorithm
     
@@ -71,7 +73,7 @@ def GD(X, y, lmd, gradient, eta = 0.1, Niterations = 1000):
 def learning_schedule(t, t0=5, t1=50):
     return t0/(t+t1)
     
-def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50):
+def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50, opt = "sgd", momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
     """Stochastic Gradient Descent Algorithm
     
         Args:
@@ -82,11 +84,19 @@ def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50):
         - m (int): number of minibatches
         - t0 (float): initial paramenter to compute the learning rate
         - t1 (float): sequential paramenter to compute the learning rate
+        - opt (string): "sgd", "adagrad", "rms", "adam" - different optimizers
+        - momentum, rho, b1, b2 (float): parameters for different optimizers
         
         Returns:
         beta/theta-values"""
         
+    if opt not in optimizers:
+        raise ValueError("Optimizer must be defined in "+str(optimizers))
+        
     theta = np.random.randn(X.shape[1])
+    v = np.zeros(X.shape[1]) # parameter for velocity (momentum), squared-gradient (adagrad, RMS),
+    m = np.zeros(X.shape[1]) # parameter for adam
+    delta = 1e-1
     
     for epoch in range(n_epochs):
         for i in range(m):
@@ -95,8 +105,22 @@ def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50):
             yi = y[random_index:random_index+1]
             gradients = gradient(Xi, yi, theta, lmd) #* X.shape[0] #2.0 * Xi.T @ ((Xi @ theta)-yi)
             eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
-            theta = theta - eta*gradients
-            
+            if opt == "sgd":
+                v = momentum * v - eta * gradients
+                theta = theta + v
+            if opt == "adagrad":
+                v = v + np.multiply(gradients, gradients)
+                theta = theta - np.multiply(eta / np.sqrt(v+delta), gradients)
+            if opt == "rms":
+                v = rho * v + (1. - rho) * np.multiply(gradients, gradients)
+                theta = theta - np.multiply(eta / np.sqrt(v+delta), gradients)
+            if opt == "adam":
+                m = b1 * m + (1. - b1) * gradients
+                v = b2 * v + (1. - b2) * np.multiply(gradients, gradients)
+                m = m / (1. - b1)
+                v = v / (1. - b2)
+                theta = theta - np.multiply(eta / np.sqrt(v+delta), m)
+                
     return theta
     
 
