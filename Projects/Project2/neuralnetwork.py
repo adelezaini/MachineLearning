@@ -24,7 +24,7 @@ activations = ["sigmoid", "tanh", "relu", "leaky_relu", "elu"]
 class NeuralNetwork:
       """ ....FFNN backprop... """
       def __init__(self, n_hidden_layers, n_hidden_neurons, hidden_activation, output_activation):
-          " Create the architecture of the network "
+          "Create the architecture of the network"
           self.n_hidden_layers = n_hidden_layers
           self.n_hidden_neurons = n_hidden_neurons
           
@@ -37,3 +37,5 @@ class NeuralNetwork:
               raise ValueError("Output activation function must be defined within "+str(activations))
           else:
               self.output_activation = output_activation
+              
+
