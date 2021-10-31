@@ -86,9 +86,9 @@ class LinearRegression:
         self.beta = GD(self.X_train, self.y_train, lmd=self.lmd, gradient=self.gradient, eta = eta, Niterations = Niterations)
         return self.beta
     
-    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50):
+    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50, momentum = 0.):
         """Fit the model and return beta-values, using the Stochastic Gradient Descent"""
-        self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
+        self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1, momentum = momentum )
         return self.beta
         
     def predictSGD_BS(self, n_epochs, m, t0 = 5, t1 = 50, n_boostraps=100):
@@ -103,7 +103,7 @@ class LinearRegression:
             # Draw a sample of our dataset
             X_sample, y_sample = resample(self.X_train, self.y_train)
             # Perform OLS equation
-            beta = SGD(X = X_sample, y = y_sample, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1)
+            beta = SGD(X = X_sample, y = y_sample, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1, momentum = momentum)
             y_pred = self.X_test @ beta
             y_pred_boot[:, i] = y_pred.ravel()
 

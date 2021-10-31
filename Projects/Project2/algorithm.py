@@ -71,7 +71,7 @@ def GD(X, y, lmd, gradient, eta = 0.1, Niterations = 1000):
 def learning_schedule(t, t0=5, t1=50):
     return t0/(t+t1)
     
-def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50):
+def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50, momentum = 0.):
     """Stochastic Gradient Descent Algorithm
     
         Args:
@@ -87,6 +87,7 @@ def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50):
         beta/theta-values"""
         
     theta = np.random.randn(X.shape[1])
+    velocity = np.zeros(X.shape[1])
     
     for epoch in range(n_epochs):
         for i in range(m):
@@ -95,7 +96,8 @@ def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50):
             yi = y[random_index:random_index+1]
             gradients = gradient(Xi, yi, theta, lmd) #* X.shape[0] #2.0 * Xi.T @ ((Xi @ theta)-yi)
             eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
-            theta = theta - eta*gradients
+            velocity = momentum * velocity - eta * gradients
+            theta = theta + velocity
             
     return theta
     
