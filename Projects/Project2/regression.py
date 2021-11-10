@@ -86,12 +86,13 @@ class LinearRegression:
         self.beta = GD(self.X_train, self.y_train, lmd=self.lmd, gradient=self.gradient, eta = eta, Niterations = Niterations)
         return self.beta
     
-    def fitSGD(self, n_epochs, m, t0 = 5, t1 = 50, opt = "sgd", momentum = 0.):
-        """Fit the model and return beta-values, using the Stochastic Gradient Descent"""
-        self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1, opt = opt, momentum = momentum )
+    def fitSGD(self, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 'schedule', t0=5, t1=50, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
+        """Fit the model and return beta-values, using the Stochastic Gradient Descent.
+        Description of the various paramentes in doc of SGD(). """
+        self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, M = M, opt = opt, eta0 = eta0, eta_type = eta_type, t0 = t0, t1 = t1, momentum = momentum, rho = rho, b1 = b1, b2 = b2)
         return self.beta
         
-    def predictSGD_BS(self, n_epochs, m, t0 = 5, t1 = 50, n_boostraps=100):
+    def predictSGD_BS(self, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 'schedule', t0 = 5, t1 = 50, n_boostraps=100, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
         """Predict y
         The Stochastic Gradient Descent and Bootstrap esampling algorithm are implemented
         
@@ -103,7 +104,7 @@ class LinearRegression:
             # Draw a sample of our dataset
             X_sample, y_sample = resample(self.X_train, self.y_train)
             # Perform OLS equation
-            beta = SGD(X = X_sample, y = y_sample, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, m = m, t0 = t0, t1 = t1, momentum = momentum)
+            beta = SGD(X = X_sample, y = y_sample, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, M = M, opt = opt, eta0 = eta0, eta_type = eta_type, t0 = t0, t1 = t1, momentum = momentum, rho = rho, b1 = b1, b2 = b2)
             y_pred = self.X_test @ beta
             y_pred_boot[:, i] = y_pred.ravel()
 
@@ -185,8 +186,10 @@ class OLSRegression(LinearRegression):
         self.beta = model.fit(self.X_train, self.y_train)
         return self.beta
         
-    def fitSGD_SK(self, eta0=0.01, alpha = 0.001, max_iter = 500, penalty=None):
+    def fitSGD_SK(self, eta0=0.1, t0 = 5, t1 = 50, max_iter = 500, penalty=None): # parameters need to step them as the other methods as default !
         """Stochastic Gredient Descent provided by Scikit Learn"""
+        alpha = 1. / t0
+        # t0 = t1 (saw that are equivalent in the documentation of sklearn.SGDRegressor, but no way to set it form the outside)
         sgdreg = sk.SGDRegressor(eta0=eta0, alpha = alpha, max_iter = max_iter, penalty = penalty, fit_intercept=False)
         sgdreg.fit(self.X_train,self.y_train)
         self.beta = sgdreg.coef_

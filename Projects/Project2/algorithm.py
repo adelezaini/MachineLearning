@@ -16,6 +16,7 @@
 
 import numpy as np
 from random import random, seed
+from autograd import grad
 
 def SVD(A):
     """ Application of SVD theorem.
@@ -47,7 +48,8 @@ def SVDinv(A):
     return np.matmul(V,np.matmul(D.T,UT))
     
 
-optimizers = ["sgd", "adagrad", "rms", "adam"]
+optimizers = ["SGD", "ADAGRAD", "RMS", "ADAM"]
+eta_types = ['static', 'schedule', 'invscaling', 'hessian']
 
 def GD(X, y, lmd, gradient, eta = 0.1, Niterations = 1000):
     """Gradient Descent Algorithm
@@ -69,11 +71,18 @@ def GD(X, y, lmd, gradient, eta = 0.1, Niterations = 1000):
         
     return theta
     
+def gradient_of(function, *args, index = 1): # not tested
+    """ Evaluate the gradient of the 'function' with the given 'arg*', using autograd.
+        The 'index' stands for the variable to derivate on (first one = 0,second one = 1, ...).
+        NB: the size of '*args' depends on the function itself. """
+    gradient = grad(function, index)
+    return gradient(args)
+    
     
 def learning_schedule(t, t0=5, t1=50):
     return t0/(t+t1)
     
-def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50, opt = "sgd", momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
+def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 'schedule', t0=5, t1=50, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
     """Stochastic Gradient Descent Algorithm
     
         Args:
@@ -81,10 +90,12 @@ def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50, opt = "sgd", momentum = 0
         - y (array): output dataset (training data)
         - gradient (function): function to compute the gradient
         - n_epochs (int): number of epochs
-        - m (int): number of minibatches
-        - t0 (float): initial paramenter to compute the learning rate
-        - t1 (float): sequential paramenter to compute the learning rate
-        - opt (string): "sgd", "adagrad", "rms", "adam" - different optimizers
+        - M (int): size of minibatches
+        - opt (string): "SGD", "ADAGRAD", "RMS", "ADAM" - different optimizers
+        - eta0 (float): learning rate if 'static' or 'invscaling'
+        - eta_type = 'static', 'schedule', 'invscaling', 'hessian' - different methods for evaluating the learning rate
+        - t0 (float): initial paramenter to compute the learning rate in 'schedule'
+        - t1 (float): sequential paramenter to compute the learning rate in 'schedule'
         - momentum, rho, b1, b2 (float): parameters for different optimizers
         
         Returns:
@@ -93,33 +104,55 @@ def SGD(X, y, lmd, gradient, n_epochs, m, t0=5, t1=50, opt = "sgd", momentum = 0
     if opt not in optimizers:
         raise ValueError("Optimizer must be defined in "+str(optimizers))
         
+    if eta_type not in eta_types:
+        raise ValueError("Learning rate type must be defined within "+str(eta_types))
+        
     theta = np.random.randn(X.shape[1])
+    m = int(X.shape[0]/M)
     v = np.zeros(X.shape[1]) # parameter for velocity (momentum), squared-gradient (adagrad, RMS),
-    m = np.zeros(X.shape[1]) # parameter for adam
+    ma = np.zeros(X.shape[1]) # parameter for adam
     delta = 1e-1
-    
+              
     for epoch in range(n_epochs):
         for i in range(m):
-            random_index = np.random.randint(m)
-            Xi = X[random_index:random_index+1]
-            yi = y[random_index:random_index+1]
+            random_index = M*np.random.randint(m)
+            Xi = X[random_index:random_index + M]
+            yi = y[random_index:random_index + M]
             gradients = gradient(Xi, yi, theta, lmd) #* X.shape[0] #2.0 * Xi.T @ ((Xi @ theta)-yi)
-            eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
-            if opt == "sgd":
+            
+            # Evaluate the hessian metrix to test eta < max H's eigvalue
+            H = (2.0/X.shape[0])* (X.T @ X)
+            eigvalues, eigvects = np.linalg.eig(H)
+            eta_opt = 1.0/np.max(eigvalues)
+            eta = eta_opt
+            
+            if eta_type == 'static':
+                eta = eta0
+            if eta_type == 'learning':
+                eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
+            if eta_type == 'invscaling':
+                power_t = 0.25 # one can change it but I dont want to overcrowd the arguments
+                eta = eta0 / pow(t, power_t)
+            if eta_type == 'hessian':
+                pass
+                
+            assert(eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes.")
+            
+            if opt == "SDG":
                 v = momentum * v - eta * gradients
                 theta = theta + v
-            if opt == "adagrad":
+            if opt == "ADAGRAD":
                 v = v + np.multiply(gradients, gradients)
                 theta = theta - np.multiply(eta / np.sqrt(v+delta), gradients)
-            if opt == "rms":
+            if opt == "RMS":
                 v = rho * v + (1. - rho) * np.multiply(gradients, gradients)
                 theta = theta - np.multiply(eta / np.sqrt(v+delta), gradients)
-            if opt == "adam":
-                m = b1 * m + (1. - b1) * gradients
+            if opt == "ADAM":
+                ma = b1 * ma + (1. - b1) * gradients
                 v = b2 * v + (1. - b2) * np.multiply(gradients, gradients)
-                m = m / (1. - b1)
+                ma = ma / (1. - b1)
                 v = v / (1. - b2)
-                theta = theta - np.multiply(eta / np.sqrt(v+delta), m)
+                theta = theta - np.multiply(eta / np.sqrt(v+delta), ma)
                 
     return theta
     

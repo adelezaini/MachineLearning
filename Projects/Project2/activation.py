@@ -74,6 +74,14 @@ class elu(activation):
         
     def grad(self):
         return np.where(self.x > 0, 1., self.alpha * np.exp(self.x))
+        
+class softmax(activation): # to test
+        
+    def eval(self):
+        return np.exp(self.x) / np.sum(np.exp(self.x),axis=0)
+      
+    def grad(self):
+        pass
       
     
   
