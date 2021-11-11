@@ -128,12 +128,12 @@ def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 's
             
             if eta_type == 'static':
                 eta = eta0
-            if eta_type == 'learning':
+            elif eta_type == 'learning':
                 eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
-            if eta_type == 'invscaling':
+            elif eta_type == 'invscaling':
                 power_t = 0.25 # one can change it but I dont want to overcrowd the arguments
                 eta = eta0 / pow(t, power_t)
-            if eta_type == 'hessian':
+            elif eta_type == 'hessian':
                 pass
                 
             assert(eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes.")
@@ -141,13 +141,13 @@ def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 's
             if opt == "SDG":
                 v = momentum * v - eta * gradients
                 theta = theta + v
-            if opt == "ADAGRAD":
+            elif opt == "ADAGRAD":
                 v = v + np.multiply(gradients, gradients)
                 theta = theta - np.multiply(eta / np.sqrt(v+delta), gradients)
-            if opt == "RMS":
+            elif opt == "RMS":
                 v = rho * v + (1. - rho) * np.multiply(gradients, gradients)
                 theta = theta - np.multiply(eta / np.sqrt(v+delta), gradients)
-            if opt == "ADAM":
+            elif opt == "ADAM":
                 ma = b1 * ma + (1. - b1) * gradients
                 v = b2 * v + (1. - b2) * np.multiply(gradients, gradients)
                 ma = ma / (1. - b1)

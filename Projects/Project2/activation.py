@@ -17,8 +17,8 @@
 import numpy as np
 
 class activation:
-    def __init__(self, x):
-        self.x = x
+    def __init__(self, X):
+        self.X = np.array(X,dtype=np.float64)
         
     def eval(self):
         """Evaluate the result"""
@@ -31,7 +31,7 @@ class activation:
 class sigmoid(activation):
 
     def eval(self):
-        return 1/(1 + np.exp(-self.x))
+        return 1/(1 + np.exp(-self.X))
         
     def grad(self):
         return self.eval() * (1. - self.eval())
@@ -39,46 +39,46 @@ class sigmoid(activation):
 class tanh(activation):
 
     def eval(self):
-        return np.tanh(self.x)
+        return np.tanh(self.X)
         
     def grad(self):
-        return 1. - (np.tanh(self.x))**2
+        return 1. - (np.tanh(self.X))**2
         
 class relu(activation):
     def eval(self):
-        return np.maximum(0., self.x)
+        return np.maximum(0., self.X)
         
     def grad(self):
-        return np.where(self.x > 0, 1., 0.)
+        return np.where(self.X > 0, 1., 0.)
 
 class leaky_relu(activation):
 
-    def __init__(self, x, alpha = 1e-2):
-        super().__init__(x)
+    def __init__(self, X, alpha = 1e-2):
+        super().__init__(X)
         self.alpha = alpha
         
     def eval(self):
-        return np.where(self.x > 0, self.x, self.alpha * self.x)
+        return np.where(self.X > 0, self.X, self.alpha * self.X)
         
     def grad(self):
-        return np.where(self.x > 0, 1., self.alpha)
+        return np.where(self.X > 0, 1., self.alpha)
         
 class elu(activation):
 
-    def __init__(self, x, alpha):
-        super().__init__(x)
+    def __init__(self, X, alpha = 1e-2):
+        super().__init__(X)
         self.alpha = alpha
         
     def eval(self):
-        return np.where(self.x > 0, self.x, self.alpha * (np.exp(self.x)-1.))
+        return np.where(self.X > 0, self.X, self.alpha * (np.exp(self.X)-1.))
         
     def grad(self):
-        return np.where(self.x > 0, 1., self.alpha * np.exp(self.x))
+        return np.where(self.X > 0, 1., self.alpha * np.exp(self.X))
         
 class softmax(activation): # to test
         
     def eval(self):
-        return np.exp(self.x) / np.sum(np.exp(self.x),axis=0)
+        return np.exp(self.X) / np.sum(np.exp(self.X),axis=0)
       
     def grad(self):
         pass
