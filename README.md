@@ -14,16 +14,17 @@ It is created for the course [*FYS-STK4155 - Applied Data Analysis and Machine L
 ## Description
 Different techniques of Applied Data Analysis and Machine Learning are here explored. The work is divided into three projects:
 
-- *Project1*: Regression and resampling techniques (OLS, Ridge, Lasso Regression - Bootstrap and cross validation). Bias-variance analysis.
+### Project1
+- *Topics:* Regression and resampling techniques (OLS, Ridge, Lasso Regression - Bootstrap and cross validation). Bias-variance analysis.
+- *Main contributors:* [Fridtjof Gjengset](https://github.com/fridtjrg), [Adele Zaini](https://github.com/adelezaini) and [Gaute Holen](https://github.com/GauteHolen) (have a look also at the [original repository](https://github.com/fridtjrg/FYS-STK4155)).
+- *Deadline:* 11 Oct 2021 (⚠️ POSTPONED: 13 Oct 2021⚠️)
+### Project2
+- *Topics:* Stochastic Gradient Descent, Neural Network
+- *Deadline:* 15 Nov 2021
 
-**⚠️ Deadline: 11 Oct 2021 (POSTPONED: 13 Oct 2021)**
-- *Project2*: Stochastic Gradient Descent, Neural Network
-
-Deadline: 15 Nov 2021
-
-- *Project3*:
-
-Deadline: 13 Dic 2021
+### Project3
+- *Topics:* 
+- *Deadline:* 13 Dic 2021
 
 📂 All the material is located on the ```projects``` directory, including the source codes and delivery reports (quick link here for the [```reports``` directory](https://github.com/fridtjrg/FYS-STK4155/tree/main/projects/reports)). In the ```projects``` directory, you can find a `README.md` file explaining the folder structure.
 
