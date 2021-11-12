@@ -71,7 +71,7 @@ def GD(X, y, lmd, gradient, eta = 0.1, Niterations = 1000):
         
     return theta
     
-def gradient_of(function, *args, index = 1): # not tested
+def gradient_of(function, *args, index = 0): # not tested
     """ Evaluate the gradient of the 'function' with the given 'arg*', using autograd.
         The 'index' stands for the variable to derivate on (first one = 0,second one = 1, ...).
         NB: the size of '*args' depends on the function itself. """
@@ -132,7 +132,7 @@ def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 's
                 eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
             elif eta_type == 'invscaling':
                 power_t = 0.25 # one can change it but I dont want to overcrowd the arguments
-                eta = eta0 / pow(t, power_t)
+                eta = eta0 / pow(epoch*m+i, power_t)
             elif eta_type == 'hessian':
                 pass
                 

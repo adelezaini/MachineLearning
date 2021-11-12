@@ -19,6 +19,7 @@ from random import random, seed
 from algorithm import SGD
 from activation import sigmoid, tanh, relu, leaky_relu, elu, softmax
 from sklearn.metrics import mean_squared_error
+from algorithm import gradient_of
 
 #activations = ['sigmoid', 'tanh', 'relu', 'leaky_relu', 'elu', 'softmax']
 ACTIVATIONS = {'sigmoid': sigmoid, 'tanh': tanh, 'relu': relu, 'leaky_relu': leaky_relu, 'elu': elu, 'softmax': softmax, None: None}
@@ -33,7 +34,7 @@ ETAS = ['static', 'schedule', 'invscaling', 'hessian']
 # predict -> logistic or linear . look at :https://github.com/UdiBhaskar/Deep-Learning/blob/master/DNN%20in%20python%20from%20scratch.ipynb
 
 class NeuralNetwork:
-      """ ....FFNN backprop... """
+      """This class creates a Feed Forward Neural Network with the backpropagation algorithm."""
       '''Parameters: layer_dims -- List Dimensions of layers including input and output layer
                 hidden_layers -- List of hidden layers
                                  'relu','sigmoid','tanh','softplus','arctan','elu','identity','softmax'
@@ -64,36 +65,79 @@ class NeuralNetwork:
                 seed -- Random seed to generate randomness
                 verbose -- takes 0  or 1
     '''
-      def __init__(self, regression = 'Linear', hidden_layes_dims, hidden_activations = ['sigmoid'],
-      #hidden_activation = 'sigmoid', output_activation=None, activations = None,
-          alpha = 1e-2):
-                  #lmd = 0.,  seed = 1234,
-                  #opt = 'SGD', M = 64, n_epochs = 50):
-          """Create the architecture of the network:
+    
+########## INITIALIZE NEURAL NETWORK
+      def __init__(self, hidden_layes_dims, hidden_activations = ['sigmoid'],
+          alpha = 1e-2, batch_size = 64, n_epochs = 50, opt = 'SGD', b1 = 0.9, b2 = 0.999,
+          eta0 = 0.1, eta_type = 'static', t1 = 50,
+          penality = None, lmd = 0):
+          """Initialize the NN means:
+            - create the architecture (layers, neurons, activations functions) of the network,
+            - set all the paramaters needed for the backpropagation and the optimization algorithms.
+            - NOT initialize inputs X and output Y.
           
             Args:
-            - regression (string): 'Linear' or 'Logistic'. Set output activation function to 'None' or to 'softmax' rispectively.
-            - hidden_layers_dims (list): list of number of neurons for each hidden layer (e.g. [2,3,4,2])
+            - hidden_layers_dims (list): list of number of neurons for each hidden (!) layer (e.g. [2,3,4,2])
             - hidden_activations (list): activation functions of the hidden layers. If len() = 1 and number of hidden layers > 1, it automatically sets a list of the same activation functions (* n_hidden_layers).
             - alpha (float): parameter for 'elu' and 'leaky_relu' activation function
-            - opt, M, n_epochs: parameters to set up the algorithms
+            - opt, batch_size, n_epochs, b1, b2: parameters to set up the optimization algorithm
+            - eta0, eta_type, t1: parameters to set up the learning rate
+            - penality, lmd: parameters to set the regularization routine
           """
           
+          ### Layers and neurons
           self.n_hidden_layers = len(hidden_layers_dims)
-          self.hidden_layers_dims = hidden_layers_dims
+          self.hidden_layers_dims = hidden_layers_dims # list of n. of neurons in each hidden layer (no input nor output)
           
-          # Hidden activation functions:
-          assert(len(hidden_activations) == len(self.n_hidden_layers), "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght."
+          #### Hidden activation functions:
+          
+            # Check if activations functions list has same lenght ad n_hidden_layers
+          assert(len(hidden_activations) == len(self.n_hidden_layers), "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght.")
+          
+            # Check if activation functions are within the list
           if all(hidden_activations[i] not in list(activations.keys()) for i in range(len(hidden_activations))):
               raise ValueError("Activation functions must be defined within "+str(list(activations.keys())))
           else:
               self.activations_list = hidden_activations
               
-          #Output activation function: (default: Regression)
+          #### Output activation function: (default: Regression)
           self.activations_list.append(None)
           
+          ### Parameters
+          self.alpha = alpha
+          self.batch_size = batch_size; self.n_epochs = n_epochs
+          self.opt = opt # Optimization algorithm ['SGD', 'ADAGRAD', 'RMS', 'ADAM', 'SGDM']
           
-    def init_weights_bias(seed):
+          if opt not in OPTIMIZERS:
+              raise ValueError("Optimizer must be defined in "+str(OPTIMIZERS))
+            
+          self.b1 = b1; self.b2 = b2
+          self.eta0 = eta0; self.eta_type = eta_type; self.t1 = t1
+          
+          if eta_type not in ETAS:
+              raise ValueError("Learning rate type must be defined within "+str(ETAS))
+          self.penality = penality; self.lmd = lmd
+        
+########## FIT THE NETWORK
+    def fit(self, X, Y, seed = None):
+    
+      assert(X.shape[0] == Y.shape[0], "Size of input is different of size of the output")
+      
+      self.n_categories = Y.shape[1]
+      self.n_features = X.shape[1]
+      self.n_inputs = X.shape[0] # = Y.shape[0]
+      
+      self.layers_dims = [self.n_feutures] + self.hidden_layers_dims + [self.n_categories] # [ n. of input features, n. of neurons in hidden layer-1,.., n. of neurons in hidden layer-n shape, output]
+      
+      # 0) INITIALIZE PARAMATERS (WEIGHTS AND BIASES)
+      self.parameters = self.init_parameters(seed)
+      
+      # 1) TRAIN THE NETWORK
+      return self.train(X, Y)
+          
+          
+########## 0) INITIALIZE PARAMATERS (WEIGHTS AND BIASES)
+    def init_parameters(self, seed):
         """ Initialize the weights and the biases in the given achitecture (i.e. [2,4,3,2] as list of number of neurons), using a normal distribution N(0,sqrt(2/fanin))."
         Args:
             seed (int): random seed to generate weights
@@ -107,35 +151,78 @@ class NeuralNetwork:
             
         parameters = {}
         L = len(self.layer_dims)
+        
         for l in range(1, L):
             parameters['W' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layer_dims[l-1]),(self.layer_dims[l], self.layer_dims[l-1]))
             parameters['b' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layer_dims[l-1]),(self.layer_dims[l], 1))
-          self.parameters = parameters
-          
-    def feed_forward(self,X):
+        
+        return parameters
+
+########## 1) TRAIN THE NETWORK
+    def train(self, X, Y): # i.e. SDG
+        """ The core algorithm of the NN object:
+        1) Feed Forward to arrive to the output AL
+        2) Backpropagation to evaluate all the grads for each example/feuture
+        3) Update parameters (weights and biases) according to the optimizer (throughout the examples/feutures)
+        4) All wrapped up in the STOCASTIC part (i.e. epochs and mini batches) of the SGD algorithm
+        """
+        
+        self.grads = {}
+        self.costs = []
+        
+        idx = np.arange(0, self.n_features)
+        count=0
+        
+        for epoch in range(1,self.n_epochs+1):
+            np.random.shuffle(idx)
+            X = X[:,idx]
+            Y = Y[:,idx]
+            for i in range(0, self.n_features, self.batch_size):
+                count += 1
+                X_batch = X[:,i:i + self.batch_size]
+                Y_batch = Y[:,i:i + self.batch_size]
+  
+                # a) Forward propagation
+                AL, cache = self.forward_propagation(X_batch)
+                
+                # b) Compute cost function
+                cost = self.compute_cost(AL, Y_batch)
+                self.costs.append(cost)
+                
+                # c) Back propagation
+                grads = self.back_propagation(AL, Y_batch)
+                self.grads = grads
+                            
+                # d) Update parameters (weights and biases)
+                eta = self.learning_rate(X, eta0, eta_type, t = (epoch * self.batch_size + i), t1)
+                self.parameters = self.update_opt_parameters(grads)
+
+        return self
+        
+########## 1a) Forward propagation:
+    def feed_forward(self, X):
         """"
-        Arguments:
-            X -- data, numpy array of shape (input size, number of examples)
-            hidden_layers -- List of hidden layers
-            weights -- Output of weights_init dict (parameters)
-            keep_prob -- probability of keeping a neuron active during drop-out, scalar
+        Feed Forward algorithm
+        
+        Args:
+            - X (array/matrix): input data of shape (input size, number of examples/feutures)
+            
         Returns:
-            AL -- last post-activation value
-            caches -- list of caches containing:
-                every cache of linear_activation_forward() (there are L-1 of them, indexed from 0 to L-1)
+            - AL (array/matrix): output layer
+            - caches (list): 'linear_activation_forward' (A_(l-1), Wl, bl, Zl), dim = [0,L-1]
         """
         Al = X
-        L = len(self.layer_dims)
+        L = self.n_hidden_layers
         caches = []
         
         for l in range(1, L): # [1,...,L-1]
         # NB: W1 = X (A0) --(1)--> A1
         #     WL = A(L-1) --(L-1)--> O(AL)
         #     len(activations_list) = L-1 ([0,L-2]
+        
             A_prev = Al
-            Wl = parameters['W' + str(l)]
-            # check:print(Wl)
-            bl = parameters['b' + str(l)]
+            Wl = self.parameters['W' + str(l)]
+            bl = self.parameters['b' + str(l)]
             Zl = np.dot(Wl, A_prev) + bl
             
             #Evaluate the next layer
@@ -146,43 +233,47 @@ class NeuralNetwork:
             cache = (A_prev, Wl, bl, Zl)
             caches.append(cache)
 
-        AL=Al # no need but it helps to read it
+        AL = Al # no need but it helps to read it
         return AL, caches
+
+    def predict(self, X):
+        raise NotImplementedError("Method NeuralNetwork.predict is abstract and cannot be called.")
+
+########## 1b) Compute cost function:
+    def cost_function(self, A, Y):
+        raise NotImplementedError("Method NeuralNetwork.cost_function is abstract and cannot be called.")
               
-    def compute_cost(A, Y, parameters, penality=None, lmb=0):
+    def compute_cost(self, AL, Y):
         """
-        Implement the cost function with None,
+        Implement the cost function with optional regulation tecniques 'l1' and 'l2'
         
-        Arguments:
-        A -- post-activation, output of forward propagation
-        Y -- "true" labels vector, of shape (output size, number of examples)
-        parameters -- python dictionary containing parameters of the model
+        Args:
+          - AL (array/matrix): post-activation, output of forward propagation
+          - Y (array/matrix): "true" labels vector, of shape (output size, number of examples)
         
         Returns:
-        cost - value of the regularized loss function
+          - cost (float): value of the regularized loss function
         """
 
-        cost = cost_function(A,Y)
+        cost = cost_function(AL,Y)
         
-        L = len(parameters)//2
+        L = len(self.parameters)//2
         
         if penality == 'l2' and lmb != 0:
             sum_weights = 0
             for l in range(1, L):
-                sum_weights = sum_weights + np.sum(np.square(parameters['W' + str(l)]))
+                sum_weights = sum_weights + np.sum(np.square(self.parameters['W' + str(l)]))
             cost = cost + sum_weights * (lmb/(2*m))
         elif penality == 'l1' and lmb != 0:
             sum_weights = 0
             for l in range(1, L):
-                sum_weights = sum_weights + np.sum(np.abs(parameters['W' + str(l)]))
+                sum_weights = sum_weights + np.sum(np.abs(self.parameters['W' + str(l)]))
             cost = cost + sum_weights * (lmb/(2*m))
     
     return cost
-    
- #   def backpropagation(self, X):
- #       O = self.feed_forward(X)
- 
-    def back_propagation(AL, Y, caches, hidden_layers, keep_prob=1, penality=None,lamda=0):
+
+########## 1c) Back propagation:
+    def back_propagation(self, AL, Y):
         """
         Implement the backward propagation, creating a dictionary of the gradients of A, W, b for each HIDDEN layer (no cost function yet)
     
@@ -207,8 +298,9 @@ class NeuralNetwork:
         Y = Y.reshape(AL.shape)
     
         # Error of the output layer (initializes the backprop alg)
-        dZL = AL - Y # here derivative pf cost function!!!
-        #delO = self.sigmoid_derivative(self.output)*(self.output - targets)*sum(inputs.T)
+        dZL = gradient_of(cost_function, AL, Y)
+        """#dZL = AL - Y # here derivative pf cost function!!!
+        #delO = self.sigmoid_derivative(self.output)*(self.output - targets)*sum(inputs.T)"""
     
         AL, W, b, Z = caches[L-1]
         grads["dW" + str(L)] = np.dot(dZL,AL.T)/m
@@ -237,32 +329,22 @@ class NeuralNetwork:
 
         return grads
         
-        
-    def update_opt_parameters(parameters, grads, opt = "SGD", eta0 = 0.1, eta_type = 'schedule', t0=5, t1=50, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
+########## 1d) Choose the learning rate schedule
+    def learning_rate(self, X, eta0, eta_type, t, t1):
         """
-        Update parameters using Stochastic gradient descent algorithm
-    
-        Arguments:
-        parameters -- python dictionary containing your parameters
-        grads -- python dictionary containing your gradients, output of L_model_backward
-        method -- method for updation of weights
-                  'SGD','SGDM','RMSP','ADAM'
-        learning rate -- learning rate alpha value
-        b1 -- weighted avg parameter for SGDM and ADAM
-        b2 -- weighted avg parameter for RMSP and ADAM
-    
+        Update the learning rate when it is different than a given costant value
+        Test that the algorithm converges (comparison with Hessian matrix eigenvalues)
+        
+        Args:
+          - X (array/matrix): input data, needed to evaluate the Hessian matrix
+          - eta0 (float): basic parameter for many learning rate schedule
+          - eta_type (string): name of the choosen learning rate schedule
+          - t (float): uptdating parameters to evaluate dynamic learning rate
+          - t1 (float): paramater needed for the 'learning' schedule
+          
         Returns:
-        parameters -- python dictionary containing your updated parameters
-                      parameters["W" + str(l)] = ...
-                      parameters["b" + str(l)] = ...
-                      opt_parameters
+          - eta (float): learning rate
         """
-        
-        if opt not in OPTIMIZERS:
-            raise ValueError("Optimizer must be defined in "+str(OPTIMIZERS))
-        
-        if eta_type not in ETAS:
-            raise ValueError("Learning rate type must be defined within "+str(ETAS))
     
         # Evaluate the hessian metrix to test eta < max H's eigvalue
         H = (2.0/X.shape[0])* (X.T @ X)
@@ -273,7 +355,8 @@ class NeuralNetwork:
         if eta_type == 'static':
             eta = eta0
         elif eta_type == 'learning':
-            eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
+            t0 = eta0 * t1
+            eta = learning_schedule(t, t0=t0, t1=t1)
         elif eta_type == 'invscaling':
             power_t = 0.25 # one can change it but I dont want to overcrowd the arguments
             eta = eta0 / pow(t, power_t)
@@ -282,11 +365,30 @@ class NeuralNetwork:
             
         assert(eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes.")
         
+        return eta
+        
+        
+########## 1d) Update parameters (weights and biases)
+    def update_opt_parameters(self, grads):
+        """
+        Update parameters using gradient descent algorithm with different optimizers.
+        OBS: The "Stochastic" is in the external loop
+    
+        Args:
+        - grads (dict): output gradients from BP
+    
+        Returns:
+        - parameters (dict): updated parameters
+        """
+        
+        # To make it easier to go through the code:
+        parameters = self.parameters
+        eta = self.eta; b1 = self.b1; b2 = self.b2
+        
         L = len(parameters) // 2 # number of layers in the neural network
         delta = 1e-8
         
-        # Initialize optimization paramaters:
-        
+      # Initialize optimization paramaters:
       for l in range(1, len(self.layer_dims)):
             opt_parameters['vdw' + str(l)] = np.zeros((self.layer_dims[l], self.layer_dims[l-1]))
             opt_parameters['vdb' + str(l)] = np.zeros((self.layer_dims[l], 1))
@@ -312,8 +414,8 @@ class NeuralNetwork:
                 
                 if method == 'SGDM':
                 
-                    vdb = momentum * vdb - eta * db
-                    vdw = momentum * vdw - eta * dW
+                    vdb = b1 * vdb - eta * db
+                    vdw = b1 * vdw - eta * dW
                     
                     W += vdw
                     b += vdb
@@ -328,8 +430,8 @@ class NeuralNetwork:
                     
                 elif method == 'RMS':
                 
-                    sdb = rho * sbd + (1. - rho) * np.square(db)
-                    sdw = rho * sdw + (1. - rho) * np.square(dW)
+                    sdb = b1 * sbd + (1. - b1) * np.square(db)
+                    sdw = b1 * sdw + (1. - b1) * np.square(dW)
                     
                     W -= eta * (dW/(np.sqrt(sdw) + delta))
                     b -= eta *(db/(np.sqrt(sdb) + delta))
@@ -353,80 +455,62 @@ class NeuralNetwork:
             grads["dW" + str(l + 1)] = dWl
             parameters["b" + str(l+1)] = bl
             grads["db" + str(l + 1)] = dbl
+            
+        self.parameters = parameters
 
         return parameters
         
-    def train(): # i.e. SDG
-        M = X.shape[1]
-        idx = np.arange(0,M)
-        count=0
-        
-        for epoch_no in range(1,self.max_epoch+1):
-            np.random.shuffle(idx)
-            X = X[:,idx]
-            y = y[:,idx]
-            for i in range(0, M, self.batch_size):
-                count += 1
-                X_batch = X[:,i:i + self.batch_size]
-                y_batch = y[:,i:i + self.batch_size]
-                
-                # Forward propagation:
-                AL, cache = self.forward_propagation(X_batch,self.hidden_layers,self.parameters,self.keep_proba,self.seed)
-                # Cost
-                cost = self.compute_cost(AL, y_batch, self.parameters,self.lamda,self.penality)
-                self.costs.append(cost)
-                
-                #back prop
-                grads = self.back_propagation(AL, y_batch, cache,self.hidden_layers,self.keep_proba,self.penality,self.lamda)
-                
-                #update params
-                self.parameters = self.update_opt_parameters(self.parameters,grads,self.learning_rate,
-                                                                        self.optimization_method,
-                                                                        self.beta1,self.beta2)
-        return self
-        
-    def fit(self, X, Y, seed = None):
-    
-      assert(X.shape[0] == Y.shape[0], "Size of input is different of size of the output")
-      
-      self.n_categories = Y.shape[1]
-      self.n_features = X.shape[1]
-      self.n_inputs = X.shape[0]
-      
-      self.X = X
-      self.Y = Y
-      
-      self.layers_dims = [self.n_feutures, self.hidden_layers_dims, self.n_categories] # [ n. of input features, n. of neurons in hidden layer-1,.., n. of neurons in hidden layer-n shape, output]
-      
-      self.init_weights_bias(seed)
-        
-        
-    def predict(self, X, proba=False): #check!!!
-        '''predicting values
-           arguments:
-              X - iput data
-                      proba -- False then return value
-                               True then return probabaility
-        '''
-        
-        out, _ = self.forward_propagation(X,self.hidden_layers,self.parameters,self.keep_proba,self.seed)
-        if proba == True:
-            return out.T
-        else:
-            return np.argmax(out, axis=0) #check!!!
 
+##################### NN_Regression #############################################
 class NN_Regression(NeuralNetwork):
-
+    """Derivative class of NeuralNetwork that implements methods for Linear Regression:
+        - output activation function = None (default)
+        - cost function = MSE
+    """
       def cost_function(A, Y): #MSE
           return mean_squared_error(A,Y)
+          
+      def predict(self, X): #check!!!
+        ''' Predicting values with FF (with no parameters optimization)
+
+        Args: X (array/matrix): input data of shape (input size, number of examples/feutures)
+        Returns: Y (array/matrix): output values
+        '''
         
+        out, _ = self.forward_propagation(X)
+        return out.T
+          
+##################### NN_Classifier #############################################
 class NN_Classifier(NeuralNetwork):
+    """Derivative class of NeuralNetwork that implements methods for Logistic Regression:
+        - output activation function = 'softmax'
+        - cost function = Cross-Entropy
+    """
     def __init__(self):
         super().__init__(X)
         self.activations_list[-1] = 'softmax'
         
       def cost_function(A, Y): # Cross_Entropy
           return np.squeeze(-np.sum(np.multiply(np.log(A),Y))/Y.shape[1])
+          
+    def predict(self, X, proba=False): #check!!!
+        ''' Predicting values (with no parameters optimization)
+
+        Args:
+            - X (array/matrix): input data of shape (input size, number of examples/feutures)
+            - prob (bool): True - return function values
+                           False – return filtered best likelihood
+            
+        Returns:
+            - Y (array/matrix): output values, as probability values or one-hot vector (i.e. [0,0,0,1,0,0])
+        '''
+        
+        out, _ = self.forward_propagation(X,self.hidden_layers,self.parameters,self.keep_proba,self.seed)
+        if proba == True:
+            return out.T
+        else:
+            # Obtain prediction by taking the class with the highest likelihood
+            return np.argmax(out, axis=0) #check!!!
 
 
     """
@@ -483,6 +567,8 @@ class NN_Classifier(NeuralNetwork):
           elif regression == 'Logistic':
               self.activations_list.append('softmax')
             """
-
+"""
+      #hidden_activation = 'sigmoid', output_activation=None, activations = None,
+      
               
 
