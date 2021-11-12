@@ -128,7 +128,7 @@ def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 's
             
             if eta_type == 'static':
                 eta = eta0
-            elif eta_type == 'learning':
+            elif eta_type == 'schedule':
                 eta = learning_schedule(epoch*m+i, t0=t0, t1=t1)
             elif eta_type == 'invscaling':
                 power_t = 0.25 # one can change it but I dont want to overcrowd the arguments

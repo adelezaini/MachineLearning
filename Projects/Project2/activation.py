@@ -17,8 +17,17 @@
 import numpy as np
 
 class activation:
-    def __init__(self, X):
+    """Abstract class to gathered all the activation functions."""
+    
+    def __init__(self, X, alpha = 1e-2):
+        """Initialize the class to evaluate the actual result or the derivative's one
+        
+        Args:
+          - X : input data
+          - alpha: needed for 'elu' and 'leaky_relu'"""
+          
         self.X = np.array(X,dtype=np.float64)
+        self.alpha = alpha
         
     def eval(self):
         """Evaluate the result"""
@@ -53,10 +62,6 @@ class relu(activation):
 
 class leaky_relu(activation):
 
-    def __init__(self, X, alpha = 1e-2):
-        super().__init__(X)
-        self.alpha = alpha
-        
     def eval(self):
         return np.where(self.X > 0, self.X, self.alpha * self.X)
         
@@ -64,10 +69,6 @@ class leaky_relu(activation):
         return np.where(self.X > 0, 1., self.alpha)
         
 class elu(activation):
-
-    def __init__(self, X, alpha = 1e-2):
-        super().__init__(X)
-        self.alpha = alpha
         
     def eval(self):
         return np.where(self.X > 0, self.X, self.alpha * (np.exp(self.X)-1.))
