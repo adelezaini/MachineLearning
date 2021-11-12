@@ -75,20 +75,24 @@ def create_xyz_dataset(n, mu, sigma):
     
     return x,y,z
 
-def create_X(x, y, n):
-    """Design matrix for two indipendent variables x,y"""
+def create_X(x, y, n = None):
+    """Design matrix for two indipendent variables x,y.
+        If n = None, return X as expected from the Neural Network."""
     if len(x.shape) > 1:
         x = np.ravel(x)
         y = np.ravel(y)
 
-    N = len(x)
-    l = int((n+1)*(n+2)/2)		# Number of elements in beta, number of feutures (degree of polynomial)
-    X = np.ones((N,l))
+    if n != None:
+        N = len(x)
+        l = int((n+1)*(n+2)/2)		# Number of elements in beta, number of feutures (degree of polynomial)
+        X = np.ones((N,l))
 
-    for i in range(1,n+1):
-        q = int((i)*(i+1)/2)
-        for k in range(i+1):
-            X[:,q+k] = (x**(i-k))*(y**k)
+        for i in range(1,n+1):
+            q = int((i)*(i+1)/2)
+            for k in range(i+1):
+                X[:,q+k] = (x**(i-k))*(y**k)
+    else:
+        X = np.transpose(np.concatenate([x[np.newaxis,:],y[np.newaxis,:]],axis = 0))
 
     return X
 

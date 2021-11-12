@@ -136,7 +136,7 @@ def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 's
             elif eta_type == 'hessian':
                 pass
                 
-            assert(eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes.")
+            assert eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes."
             
             if opt == "SDG":
                 v = momentum * v - eta * gradients

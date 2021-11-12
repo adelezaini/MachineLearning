@@ -34,99 +34,101 @@ DELTA = 1e-8
 # predict -> logistic or linear . look at :https://github.com/UdiBhaskar/Deep-Learning/blob/master/DNN%20in%20python%20from%20scratch.ipynb
 
 class NeuralNetwork:
-      """This class creates a Feed Forward Neural Network with the backpropagation algorithm.
-      
-      Class members after initializing and fitting the class:
-        - n_inputs (int): number of inputs (i.e. number of rows of X and Y)
-        - n_features (int): number of feutures/examples (i.e. number of columns of X)
-        - n_categories (int): number of categories (i.e. number of columns of Y)
-        - hidden_layers_dims (int list): list of number of neurons for each hidden (!) layer (e.g. [2,3,4,2])
-        - n_hidden_layers (int): number of hidden layer
-        - layers_dims (int list): list of number of neurons for each layer (e.g. [n_feutures, 2,3,4,2, n_categories])
-        - activations_list (string list): list of activation functions name of the hidden layers + output activation function (default: None). The output activation function chagnes in changing the derivative class to NN_Classifier ('softmax')
-        - parameters (dict): optimized weights and biases (after trained the NN)
-        - grads (dict): gradients (after back propagation)
-        - costs (list): list of cost results step by step in the optimization process
-        - alpha (float): parameter for 'elu' and 'leaky_relu' activation function
-        - opt (string): optimizer ['SGD', 'ADAGRAD', 'RMS', 'ADAM', 'SGDM']
-        - batch_size (int): batch size for the SGD
-        - n_epochs (int): number of epochs for the SGD
-        - b1, b2: parameters to set up the optimization algorithm
-        - eta0 (float): basic parameter for many learning rate schedule
-        - eta_type (string): name of the choosen learning rate schedule
-        - t1 (float): paramater needed for the learning rate 'schedule'
-        - penality, lmd: parameters to set the regularization routine
-      """
+    """This class creates a Feed Forward Neural Network with the backpropagation algorithm.
+
+    Class members after initializing and fitting the class:
+      - n_inputs (int): number of inputs (i.e. number of rows of X and Y)
+      - n_features (int): number of feutures/examples (i.e. number of columns of X)
+      - n_categories (int): number of categories (i.e. number of columns of Y)
+      - hidden_layers_dims (int list): list of number of neurons for each hidden (!) layer (e.g. [2,3,4,2])
+      - n_hidden_layers (int): number of hidden layer
+      - layers_dims (int list): list of number of neurons for each layer (e.g. [n_feutures, 2,3,4,2, n_categories])
+      - activations_list (string list): list of activation functions name of the hidden layers + output activation function (default: None). The output activation function chagnes in changing the derivative class to NN_Classifier ('softmax')
+      - parameters (dict): optimized weights and biases (after trained the NN)
+      - grads (dict): gradients (after back propagation)
+      - costs (list): list of cost results step by step in the optimization process
+      - alpha (float): parameter for 'elu' and 'leaky_relu' activation function
+      - opt (string): optimizer ['SGD', 'ADAGRAD', 'RMS', 'ADAM', 'SGDM']
+      - batch_size (int): batch size for the SGD
+      - n_epochs (int): number of epochs for the SGD
+      - b1, b2: parameters to set up the optimization algorithm
+      - eta0 (float): basic parameter for many learning rate schedule
+      - eta_type (string): name of the choosen learning rate schedule
+      - t1 (float): paramater needed for the learning rate 'schedule'
+      - penality, lmd: parameters to set the regularization routine
+    """
 
     
 ########## INITIALIZE NEURAL NETWORK
-      def __init__(self, hidden_layes_dims, hidden_activations = ['sigmoid'],
-          alpha = 1e-2, batch_size = 64, n_epochs = 50, opt = 'SGD', b1 = 0.9, b2 = 0.999,
-          eta0 = 0.1, eta_type = 'static', t1 = 50,
-          penality = None, lmd = 0):
-          """Initialize the NN means:
-            - create the architecture (layers, neurons, activations functions) of the network,
-            - set all the paramaters needed for the backpropagation and the optimization algorithms.
-            - NOT initialize inputs X and output Y.
-          
-            Args:
-            - hidden_layers_dims (list): list of number of neurons for each hidden (!) layer (e.g. [2,3,4,2])
-            - hidden_activations (list): activation functions of the hidden layers. If len() = 1 and number of hidden layers > 1, it automatically sets a list of the same activation functions (* n_hidden_layers).
-            - alpha (float): parameter for 'elu' and 'leaky_relu' activation function
-            - opt, batch_size, n_epochs, b1, b2: parameters to set up the optimization algorithm
-            - eta0, eta_type, t1: parameters to set up the learning rate
-            - penality, lmd: parameters to set the regularization routine
-          """
-          
-          ### Layers and neurons
-          self.n_hidden_layers = len(hidden_layers_dims)
-          self.hidden_layers_dims = hidden_layers_dims # list of n. of neurons in each hidden layer (no input nor output)
-          
-          #### Hidden activation functions:
-          
-            # Check if activations functions list has same lenght ad n_hidden_layers
-          assert(len(hidden_activations) == len(self.n_hidden_layers), "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght.")
-          
-            # Check if activation functions are within the list
-          if all(hidden_activations[i] not in list(activations.keys()) for i in range(len(hidden_activations))):
-              raise ValueError("Activation functions must be defined within "+str(list(activations.keys())))
-          else:
-              self.activations_list = hidden_activations
-              
-          #### Output activation function: (default: Regression)
-          self.activations_list.append(None)
-          
-          ### Parameters
-          self.alpha = alpha
-          self.batch_size = batch_size; self.n_epochs = n_epochs
-          self.opt = opt # Optimization algorithm ['SGD', 'ADAGRAD', 'RMS', 'ADAM', 'SGDM']
-          
-          if opt not in OPTIMIZERS:
-              raise ValueError("Optimizer must be defined in "+str(OPTIMIZERS))
+    def __init__(self, hidden_layes_dims, hidden_activations = ['sigmoid'],
+        alpha = 1e-2, batch_size = 64, n_epochs = 50, opt = 'SGD', b1 = 0.9, b2 = 0.999,
+        eta0 = 0.1, eta_type = 'static', t1 = 50,
+        penality = None, lmd = 0):
+        """Initialize the NN means:
+          - create the architecture (layers, neurons, activations functions) of the network,
+          - set all the paramaters needed for the backpropagation and the optimization algorithms.
+          - NOT initialize inputs X and output Y.
+        
+          Args:
+          - hidden_layers_dims (list): list of number of neurons for each hidden (!) layer (e.g. [2,3,4,2])
+          - hidden_activations (list): activation functions of the hidden layers. If len() = 1 and number of hidden layers > 1, it automatically sets a list of the same activation functions (* n_hidden_layers).
+          - alpha (float): parameter for 'elu' and 'leaky_relu' activation function
+          - opt, batch_size, n_epochs, b1, b2: parameters to set up the optimization algorithm
+          - eta0, eta_type, t1: parameters to set up the learning rate
+          - penality, lmd: parameters to set the regularization routine
+        """
+        
+        ### Layers and neurons
+        self.n_hidden_layers = len(hidden_layers_dims)
+        self.hidden_layers_dims = hidden_layers_dims # list of n. of neurons in each hidden layer (no input nor output)
+
+        #### Hidden activation functions:
+
+          # Check if activations functions list has same lenght ad n_hidden_layers
+        assert len(hidden_activations) == len(self.n_hidden_layers), "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght."
+
+          # Check if activation functions are within the list
+        if all(hidden_activations[i] not in list(activations.keys()) for i in range(len(hidden_activations))):
+            raise ValueError("Activation functions must be defined within "+str(list(activations.keys())))
+        else:
+            self.activations_list = hidden_activations
             
-          self.b1 = b1; self.b2 = b2
-          self.eta0 = eta0; self.eta_type = eta_type; self.t1 = t1
+        #### Output activation function: (default: Regression)
+        self.activations_list.append(None)
+
+        ### Parameters
+        self.alpha = alpha
+        self.batch_size = batch_size; self.n_epochs = n_epochs
+        self.opt = opt # Optimization algorithm ['SGD', 'ADAGRAD', 'RMS', 'ADAM', 'SGDM']
+
+        if opt not in OPTIMIZERS:
+            raise ValueError("Optimizer must be defined in "+str(OPTIMIZERS))
           
-          if eta_type not in ETAS:
-              raise ValueError("Learning rate type must be defined within "+str(ETAS))
-          self.penality = penality; self.lmd = lmd
+        self.b1 = b1; self.b2 = b2
+        self.eta0 = eta0; self.eta_type = eta_type; self.t1 = t1
+
+        if eta_type not in ETAS:
+            raise ValueError("Learning rate type must be defined within "+str(ETAS))
+        self.penality = penality; self.lmd = lmd
         
 ########## FIT THE NETWORK
     def fit(self, X, Y, seed = None):
-    
-      assert(X.shape[0] == Y.shape[0], "Size of input is different of size of the output")
-      
-      self.n_categories = Y.shape[1]
-      self.n_features = X.shape[1]
-      self.n_inputs = X.shape[0] # = Y.shape[0]
-      
-      self.layers_dims = [self.n_feutures] + self.hidden_layers_dims + [self.n_categories] # [ n. of input features, n. of neurons in hidden layer-1,.., n. of neurons in hidden layer-n shape, output]
-      
-      # 0) INITIALIZE PARAMATERS (WEIGHTS AND BIASES)
-      self.parameters = self.init_parameters(seed)
-      
-      # 1) TRAIN THE NETWORK
-      return self.train(X, Y)
+        """Fit the network with the given input X and output Y.
+        Initialiaze layers, parameters and train the network."""
+
+        assert X.shape[0] == Y.shape[0], "Size of input is different of size of the output"
+
+        self.n_categories = Y.shape[1]
+        self.n_features = X.shape[1]
+        self.n_inputs = X.shape[0] # = Y.shape[0]
+
+        self.layers_dims = [self.n_feutures] + self.hidden_layers_dims + [self.n_categories] # [ n. of input features, n. of neurons in hidden layer-1,.., n. of neurons in hidden layer-n shape, output]
+
+        # 0) INITIALIZE PARAMATERS (WEIGHTS AND BIASES)
+        self.parameters = self.init_parameters(seed)
+
+        # 1) TRAIN THE NETWORK
+        return self.train(X, Y)
           
           
 ########## 0) INITIALIZE PARAMATERS (WEIGHTS AND BIASES)
@@ -187,7 +189,7 @@ class NeuralNetwork:
                 self.grads = grads
                             
                 # d) Update parameters (weights and biases)
-                eta = self.learning_rate(X, self.eta0, self.eta_type, t = (epoch * self.batch_size + i), self.t1)
+                eta = self.learning_rate(X, self.eta0, self.eta_type, t = (epoch * self.batch_size + i), t1 = self.t1)
                 self.parameters = self.update_opt_parameters(grads, eta)
 
         return self
@@ -263,7 +265,7 @@ class NeuralNetwork:
                 sum_weights = sum_weights + np.sum(np.abs(self.parameters['W' + str(l)]))
             cost = cost + sum_weights * (lmb/(2*m))
     
-    return cost
+        return cost
 
 ########## 1c) Back propagation:
     def back_propagation(self, AL, Y, cache):
@@ -351,7 +353,7 @@ class NeuralNetwork:
         elif eta_type == 'hessian':
             pass
             
-        assert(eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes.")
+        assert eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes."
         
         return eta
         
@@ -375,8 +377,8 @@ class NeuralNetwork:
         
         L = len(parameters) // 2 # number of layers in the neural network
                 
-      # Initialize optimization paramaters:
-      for l in range(1, len(self.layer_dims)):
+        # Initialize optimization paramaters:
+        for l in range(1, len(self.layer_dims)):
             opt_parameters['vdw' + str(l)] = np.zeros((self.layer_dims[l], self.layer_dims[l-1]))
             opt_parameters['vdb' + str(l)] = np.zeros((self.layer_dims[l], 1))
             opt_parameters['sdw' + str(l)] = np.zeros((self.layer_dims[l], self.layer_dims[l-1]))
@@ -455,10 +457,10 @@ class NN_Regression(NeuralNetwork):
         - cost function = MSE
         - predict = returns function prediction
     """
-      def cost_function(A, Y): #MSE
+    def cost_function(A, Y): #MSE
           return mean_squared_error(A,Y)
           
-      def predict(self, X): #check!!!
+    def predict(self, X): #check!!!
         ''' Predicting values with FF (with no parameters optimization)
 
         Args: X (array/matrix): input data of shape (input size, number of examples/feutures)
@@ -479,7 +481,7 @@ class NN_Classifier(NeuralNetwork):
         super().__init__(X)
         self.activations_list[-1] = 'softmax'
         
-      def cost_function(A, Y): # Cross_Entropy
+    def cost_function(A, Y): # Cross_Entropy
           return np.squeeze(-np.sum(np.multiply(np.log(A),Y))/Y.shape[1])
           
     def predict(self, X, proba=False): #check!!!
@@ -557,7 +559,7 @@ class NN_Classifier(NeuralNetwork):
               self.activations_list.append('softmax')
             """
 """
-      #hidden_activation = 'sigmoid', output_activation=None, activations = None,
+      #hidden_activation = 'sigmoid', output_activation=None, activations = None,"""
       
               
 
