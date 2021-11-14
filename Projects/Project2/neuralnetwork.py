@@ -23,7 +23,7 @@ from algorithm import gradient_of
 
 #activations = ['sigmoid', 'tanh', 'relu', 'leaky_relu', 'elu', 'softmax']
 ACTIVATIONS = {'sigmoid': sigmoid, 'tanh': tanh, 'relu': relu, 'leaky_relu': leaky_relu, 'elu': elu, 'softmax': softmax, None: None}
-OPTIMIZERS = ['SGD', 'ADAGRAD', 'RMS', 'ADAM', 'SGDM']
+OPTIMIZERS = ['SGD', 'SGDM', 'ADAGRAD', 'RMS', 'ADAM']
 ETAS = ['static', 'schedule', 'invscaling', 'hessian']
 DELTA = 1e-8
 
@@ -60,7 +60,7 @@ class NeuralNetwork:
 
     
 ########## INITIALIZE NEURAL NETWORK
-    def __init__(self, hidden_layes_dims, hidden_activations = ['sigmoid'],
+    def __init__(self, hidden_layers_dims = [2], hidden_activations = ['sigmoid'],
         alpha = 1e-2, batch_size = 64, n_epochs = 50, opt = 'SGD', b1 = 0.9, b2 = 0.999,
         eta0 = 0.1, eta_type = 'static', t1 = 50,
         penality = None, lmd = 0):
@@ -83,15 +83,19 @@ class NeuralNetwork:
         self.hidden_layers_dims = hidden_layers_dims # list of n. of neurons in each hidden layer (no input nor output)
 
         #### Hidden activation functions:
-
-          # Check if activations functions list has same lenght ad n_hidden_layers
-        assert len(hidden_activations) == len(self.n_hidden_layers), "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght."
-
-          # Check if activation functions are within the list
-        if all(hidden_activations[i] not in list(activations.keys()) for i in range(len(hidden_activations))):
-            raise ValueError("Activation functions must be defined within "+str(list(activations.keys())))
+        
+        # Check if activation functions are within the list
+        if all(hidden_activations[i] not in list(ACTIVATIONS.keys()) for i in range(len(hidden_activations))):
+            raise ValueError("Activation functions must be defined within "+str(list(ACTIVATIONS.keys())))
+            
+        # Set all same hidden activation?
+        if len(hidden_activations) == 1 and len(hidden_layers_dims) > 1:
+          self.activations_list = hidden_activations * len(hidden_layers_dims)
         else:
-            self.activations_list = hidden_activations
+          self.activations_list = hidden_activations
+          
+        # Check if activations functions list has same lenght ad n_hidden_layers
+        assert len(self.activations_list) == self.n_hidden_layers, "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght."
             
         #### Output activation function: (default: Regression)
         self.activations_list.append(None)
@@ -115,14 +119,17 @@ class NeuralNetwork:
     def fit(self, X, Y, seed = None):
         """Fit the network with the given input X and output Y.
         Initialiaze layers, parameters and train the network."""
-
+        
         assert X.shape[0] == Y.shape[0], "Size of input is different of size of the output"
-
-        self.n_categories = Y.shape[1]
-        self.n_features = X.shape[1]
+            
+        Y = Y.reshape(1,-1)
+                
         self.n_inputs = X.shape[0] # = Y.shape[0]
+        self.n_features = X.shape[1]
+        self.n_categories = Y.shape[0]
 
-        self.layers_dims = [self.n_feutures] + self.hidden_layers_dims + [self.n_categories] # [ n. of input features, n. of neurons in hidden layer-1,.., n. of neurons in hidden layer-n shape, output]
+        self.layers_dims = [self.n_features] + self.hidden_layers_dims + [self.n_categories] # [ n. of input features, n. of neurons in hidden layer-1,.., n. of neurons in hidden layer-n shape, output]
+        print(self.layers_dims)
 
         # 0) INITIALIZE PARAMATERS (WEIGHTS AND BIASES)
         self.parameters = self.init_parameters(seed)
@@ -138,18 +145,18 @@ class NeuralNetwork:
             seed (int): random seed to generate weights
         Returns:
             parameters (dict): dictionary containing weights matrixes and biases vectors, named as "W1", "b1", ..., "WL", "bL":
-                    - Wl: weight matrix of shape (layer_dims[l], layer_dims[l-1])
-                    - bl: bias vector of shape (layer_dims[l], 1)
+                    - Wl: weight matrix of shape (layers_dims[l], layers_dims[l-1])
+                    - bl: bias vector of shape (layers_dims[l], 1)
         """
         if seed != None:
             np.random.seed(seed)
             
         parameters = {}
-        L = len(self.layer_dims)
+        L = len(self.layers_dims)
         
         for l in range(1, L):
-            parameters['W' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layer_dims[l-1]),(self.layer_dims[l], self.layer_dims[l-1]))
-            parameters['b' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layer_dims[l-1]),(self.layer_dims[l], 1))
+            parameters['W' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layers_dims[l-1]),(self.layers_dims[l], self.layers_dims[l-1]))
+            parameters['b' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layers_dims[l-1]),(self.layers_dims[l], 1))
         
         return parameters
 
@@ -165,12 +172,13 @@ class NeuralNetwork:
         self.grads = {}
         self.costs = []
         
-        idx = np.arange(0, self.n_features)
+        idx = np.arange(0, X.shape[1])
         count=0
         
         for epoch in range(1,self.n_epochs+1):
             np.random.shuffle(idx)
             X = X[:,idx]
+            print(Y.shape)
             Y = Y[:,idx]
             for i in range(0, self.n_features, self.batch_size):
                 count += 1
@@ -178,7 +186,10 @@ class NeuralNetwork:
                 Y_batch = Y[:,i:i + self.batch_size]
   
                 # a) Forward propagation
-                AL, cache = self.forward_propagation(X_batch)
+                AL, cache = self.feed_forward(X_batch)
+                print("feedforward works")
+                print("AL shape", AL.shape)
+                print("Y shape", Y.shape)
                 
                 # b) Compute cost function
                 cost = self.compute_cost(AL, Y_batch)
@@ -189,7 +200,7 @@ class NeuralNetwork:
                 self.grads = grads
                             
                 # d) Update parameters (weights and biases)
-                eta = self.learning_rate(X, self.eta0, self.eta_type, t = (epoch * self.batch_size + i), t1 = self.t1)
+                eta = self.learning_rate(X_batch, self.eta0, self.eta_type, t = (epoch * self.batch_size + i), t1 = self.t1)
                 self.parameters = self.update_opt_parameters(grads, eta)
 
         return self
@@ -215,9 +226,12 @@ class NeuralNetwork:
         #     WL = A(L-1) --(L-1)--> O(AL)
         #     len(activations_list) = L-1 ([0,L-2]
         
+            print(l)
             A_prev = Al
             Wl = self.parameters['W' + str(l)]
+            print("Wl.shape",Wl.shape)
             bl = self.parameters['b' + str(l)]
+            print("bl.shape",bl.shape)
             Zl = np.dot(Wl, A_prev) + bl
             
             #Evaluate the next layer
@@ -250,7 +264,7 @@ class NeuralNetwork:
           - cost (float): value of the regularized loss function
         """
 
-        cost = cost_function(AL,Y)
+        cost = self.cost_function(AL,Y)
         
         L = len(self.parameters)//2
         
@@ -283,7 +297,7 @@ class NeuralNetwork:
         """
         
         grads = {}
-        L = len(self.layer_dims) # the number of layers
+        L = len(self.layers_dims) # the number of layers
     
         m = AL.shape[1]
         Y = Y.reshape(AL.shape)
@@ -378,11 +392,11 @@ class NeuralNetwork:
         L = len(parameters) // 2 # number of layers in the neural network
                 
         # Initialize optimization paramaters:
-        for l in range(1, len(self.layer_dims)):
-            opt_parameters['vdw' + str(l)] = np.zeros((self.layer_dims[l], self.layer_dims[l-1]))
-            opt_parameters['vdb' + str(l)] = np.zeros((self.layer_dims[l], 1))
-            opt_parameters['sdw' + str(l)] = np.zeros((self.layer_dims[l], self.layer_dims[l-1]))
-            opt_parameters['sdb' + str(l)] = np.zeros((self.layer_dims[l], 1))
+        for l in range(1, len(self.layers_dims)):
+            opt_parameters['vdw' + str(l)] = np.zeros((self.layers_dims[l], self.layers_dims[l-1]))
+            opt_parameters['vdb' + str(l)] = np.zeros((self.layers_dims[l], 1))
+            opt_parameters['sdw' + str(l)] = np.zeros((self.layers_dims[l], self.layers_dims[l-1]))
+            opt_parameters['sdb' + str(l)] = np.zeros((self.layers_dims[l], 1))
             
         for l in range(L):
             # Just rewrite to make the code easier to follow
@@ -457,7 +471,7 @@ class NN_Regression(NeuralNetwork):
         - cost function = MSE
         - predict = returns function prediction
     """
-    def cost_function(A, Y): #MSE
+    def cost_function(self,A, Y): #MSE
           return mean_squared_error(A,Y)
           
     def predict(self, X): #check!!!
@@ -481,7 +495,7 @@ class NN_Classifier(NeuralNetwork):
         super().__init__(X)
         self.activations_list[-1] = 'softmax'
         
-    def cost_function(A, Y): # Cross_Entropy
+    def cost_function(self,A, Y): # Cross_Entropy
           return np.squeeze(-np.sum(np.multiply(np.log(A),Y))/Y.shape[1])
           
     def predict(self, X, proba=False): #check!!!

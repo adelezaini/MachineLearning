@@ -92,7 +92,7 @@ def create_X(x, y, n = None):
             for k in range(i+1):
                 X[:,q+k] = (x**(i-k))*(y**k)
     else:
-        X = np.transpose(np.concatenate([x[np.newaxis,:],y[np.newaxis,:]],axis = 0))
+        X = np.vstack((x,y)).T
 
     return X
 
