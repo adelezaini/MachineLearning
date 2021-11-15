@@ -36,6 +36,15 @@ class activation:
     def gradient(self):
         """Evaluate the gradient"""
         raise NotImplementedError("Method activation.gradient is abstract and cannot be called")
+
+class linear(activation):
+
+    def eval(self):
+        return self.X
+        
+    def grad(self):
+        return np.ones(shape=self.X.shape)
+        
         
 class sigmoid(activation):
 

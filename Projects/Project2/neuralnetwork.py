@@ -17,12 +17,12 @@
 import numpy as np
 from random import random, seed
 from algorithm import SGD
-from activation import sigmoid, tanh, relu, leaky_relu, elu, softmax
+from activation import sigmoid, tanh, relu, leaky_relu, elu, softmax, linear
 from sklearn.metrics import mean_squared_error
 from algorithm import gradient_of
 
 #activations = ['sigmoid', 'tanh', 'relu', 'leaky_relu', 'elu', 'softmax']
-ACTIVATIONS = {'sigmoid': sigmoid, 'tanh': tanh, 'relu': relu, 'leaky_relu': leaky_relu, 'elu': elu, 'softmax': softmax, None: None}
+ACTIVATIONS = {'sigmoid': sigmoid, 'tanh': tanh, 'relu': relu, 'leaky_relu': leaky_relu, 'elu': elu, 'softmax': softmax, 'linear': linear}
 OPTIMIZERS = ['SGD', 'SGDM', 'ADAGRAD', 'RMS', 'ADAM']
 ETAS = ['static', 'schedule', 'invscaling', 'hessian']
 DELTA = 1e-8
@@ -32,6 +32,7 @@ DELTA = 1e-8
 # look at here : for cross entropy https://ml-cheatsheet.readthedocs.io/en/latest/loss_functions.html
 # derivative of cost function
 # predict -> logistic or linear . look at :https://github.com/UdiBhaskar/Deep-Learning/blob/master/DNN%20in%20python%20from%20scratch.ipynb
+
 
 class NeuralNetwork:
     """This class creates a Feed Forward Neural Network with the backpropagation algorithm.
@@ -79,8 +80,8 @@ class NeuralNetwork:
         """
         
         ### Layers and neurons
-        self.n_hidden_layers = len(hidden_layers_dims)
         self.hidden_layers_dims = hidden_layers_dims # list of n. of neurons in each hidden layer (no input nor output)
+        self.L = len(hidden_layers_dims) +1 # total number of layers, included output, excluded input (i.e. L = output layer)
 
         #### Hidden activation functions:
         
@@ -95,10 +96,11 @@ class NeuralNetwork:
           self.activations_list = hidden_activations
           
         # Check if activations functions list has same lenght ad n_hidden_layers
-        assert len(self.activations_list) == self.n_hidden_layers, "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght."
+        assert len(self.activations_list) == len(hidden_layers_dims), "Lenght of 'hidden_activations' list doesn't match with 'hidden_layer' lenght."
             
         #### Output activation function: (default: Regression)
-        self.activations_list.append(None)
+        self.activations_list.append('linear')
+        print("Activation list:", len(self.activations_list), self.activations_list)
 
         ### Parameters
         self.alpha = alpha
@@ -120,16 +122,15 @@ class NeuralNetwork:
         """Fit the network with the given input X and output Y.
         Initialiaze layers, parameters and train the network."""
         
-        assert X.shape[0] == Y.shape[0], "Size of input is different of size of the output"
+        #assert X.shape[0] == Y.shape[0], "Size of input is different of size of the output"
             
         Y = Y.reshape(1,-1)
                 
-        self.n_inputs = X.shape[0] # = Y.shape[0]
-        self.n_features = X.shape[1]
+        self.n_inputs = X.shape[1] # = Y.shape[0]
+        self.n_features = X.shape[0]
         self.n_categories = Y.shape[0]
 
         self.layers_dims = [self.n_features] + self.hidden_layers_dims + [self.n_categories] # [ n. of input features, n. of neurons in hidden layer-1,.., n. of neurons in hidden layer-n shape, output]
-        print(self.layers_dims)
 
         # 0) INITIALIZE PARAMATERS (WEIGHTS AND BIASES)
         self.parameters = self.init_parameters(seed)
@@ -152,12 +153,12 @@ class NeuralNetwork:
             np.random.seed(seed)
             
         parameters = {}
-        L = len(self.layers_dims)
+        #L = len(self.layers_dims)
         
-        for l in range(1, L):
-            parameters['W' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layers_dims[l-1]),(self.layers_dims[l], self.layers_dims[l-1]))
-            parameters['b' + str(l)] = np.random.normal(0,np.sqrt(2.0/self.layers_dims[l-1]),(self.layers_dims[l], 1))
-        
+        for l in range(self.L): #1, L):
+            parameters['W' + str(l+1)] = np.random.normal(0,np.sqrt(2.0/self.layers_dims[l]),(self.layers_dims[l+1], self.layers_dims[l]))
+            parameters['b' + str(l+1)] = np.random.normal(0,np.sqrt(2.0/self.layers_dims[l]),(self.layers_dims[l+1], 1))
+        print("parameters:", parameters)
         return parameters
 
 ########## 1) TRAIN THE NETWORK
@@ -172,7 +173,7 @@ class NeuralNetwork:
         self.grads = {}
         self.costs = []
         
-        idx = np.arange(0, X.shape[1])
+        idx = np.arange(0, Y.shape[1])
         count=0
         
         for epoch in range(1,self.n_epochs+1):
@@ -186,17 +187,17 @@ class NeuralNetwork:
                 Y_batch = Y[:,i:i + self.batch_size]
   
                 # a) Forward propagation
-                AL, cache = self.feed_forward(X_batch)
+                AL, caches = self.feed_forward(X_batch)
                 print("feedforward works")
                 print("AL shape", AL.shape)
-                print("Y shape", Y.shape)
+                print("Y shape", Y_batch.shape)
                 
                 # b) Compute cost function
                 cost = self.compute_cost(AL, Y_batch)
                 self.costs.append(cost)
                 
                 # c) Back propagation
-                grads = self.back_propagation(AL, Y_batch, cache)
+                grads = self.back_propagation(AL, Y_batch, caches)
                 self.grads = grads
                             
                 # d) Update parameters (weights and biases)
@@ -218,24 +219,24 @@ class NeuralNetwork:
             - caches (list): 'linear_activation_forward' (A_(l-1), Wl, bl, Zl), dim = [0,L-1]
         """
         Al = X
-        L = self.n_hidden_layers
+        #L = self.n_hidden_layers
         caches = []
         
-        for l in range(1, L): # [1,...,L-1]
-        # NB: W1 = X (A0) --(1)--> A1
+        for l in range(self.L): # (1, L): # [1,...,L-1]
+        # NB: W1 = X (A0) --(0)--> A1
         #     WL = A(L-1) --(L-1)--> O(AL)
         #     len(activations_list) = L-1 ([0,L-2]
         
             print(l)
             A_prev = Al
-            Wl = self.parameters['W' + str(l)]
+            Wl = self.parameters['W' + str(l+1)]
             print("Wl.shape",Wl.shape)
-            bl = self.parameters['b' + str(l)]
+            bl = self.parameters['b' + str(l+1)]
             print("bl.shape",bl.shape)
-            Zl = np.dot(Wl, A_prev) + bl
+            Zl = np.matmul(Wl, A_prev) + bl
             
-            #Evaluate the next layer
-            act_func = ACTIVATIONS[self.activations_list[l-1]] #hidden_activation(Z, l)
+            # Evaluate the next layer
+            act_func = ACTIVATIONS[self.activations_list[l]] #hidden_activation(Z, l)
             Al = act_func(Zl, self.alpha).eval()
             
             # Record all the elements of evaluating each layer (A_(l-1), Wl + bl = Zl, A_(l-1) + Zl = Al ***yuppy***)
@@ -266,23 +267,22 @@ class NeuralNetwork:
 
         cost = self.cost_function(AL,Y)
         
-        L = len(self.parameters)//2
+        #L = len(self.parameters)//2
+        sum_weights = 0
         
-        if penality == 'l2' and lmb != 0:
-            sum_weights = 0
-            for l in range(1, L):
-                sum_weights = sum_weights + np.sum(np.square(self.parameters['W' + str(l)]))
-            cost = cost + sum_weights * (lmb/(2*m))
-        elif penality == 'l1' and lmb != 0:
-            sum_weights = 0
-            for l in range(1, L):
-                sum_weights = sum_weights + np.sum(np.abs(self.parameters['W' + str(l)]))
-            cost = cost + sum_weights * (lmb/(2*m))
+        if self.penality == 'l2' and lmb != 0:
+            for l in range(self.L): #1, L):
+                sum_weights += np.sum(np.square(self.parameters['W' + str(l+1)]))
+            cost = cost + sum_weights * (lmb/(2.*Y.shape[1]))
+        elif self.penality == 'l1' and lmb != 0:
+            for l in range(self.L): #1, L):
+                sum_weights += np.sum(np.abs(self.parameters['W' + str(l+1)]))
+            cost += sum_weights * (lmb/(2.*Y.shape[1]))
     
         return cost
 
 ########## 1c) Back propagation:
-    def back_propagation(self, AL, Y, cache):
+    def back_propagation(self, AL, Y, caches):
         """Implement the backward propagation
     
         Args:
@@ -297,38 +297,39 @@ class NeuralNetwork:
         """
         
         grads = {}
-        L = len(self.layers_dims) # the number of layers
+        #L = len(self.layers_dims) # the number of layers
     
         m = AL.shape[1]
-        Y = Y.reshape(AL.shape)
+        #Y = Y.reshape(AL.shape)
     
         # Error of the output layer (initializes the backprop alg)
-        dZL = gradient_of(cost_function, AL, Y)
+        dZL = AL - Y  #dZL = gradient_of(cost_function, AL, Y)
         """#dZL = AL - Y # here derivative pf cost function!!!
         #delO = self.sigmoid_derivative(self.output)*(self.output - targets)*sum(inputs.T)"""
-    
-        AL, W, b, Z = caches[L-1]
-        grads["dW" + str(L)] = np.dot(dZL,AL.T)/m
-        grads["db" + str(L)] = np.sum(dZL,axis=1,keepdims=True)/m
-        grads["dA" + str(L-1)] = np.dot(W.T,dZL)
-    
-        for l in reversed(range(L-1)): # Loop from l=L-2 to l=0
         
-            A_prev, Wl, bl, Zl = caches[l]
+        L = self.L
+        AL, W, b, Z = caches[-1]
+        grads["dW" + str(L)] = np.matmul(dZL,AL.T)/m
+        grads["db" + str(L)] = np.sum(dZL,axis=1,keepdims=True)/m
+        grads["dA" + str(L-1)] = np.matmul(W.T,dZL)
+    
+        for l in reversed(range(self.L-1)): # Loop from l=L-2 to l=0
+        
+            A_prev, Wl, bl, Zl = caches[l+1]
             
             m = A_prev.shape[1]
             dA_prev = grads["dA" + str(l + 1)]
             
-            act_func = ACTIVATIONS[self.activations_list[l-1]] # not sureeeeee of l-1
+            act_func = ACTIVATIONS[self.activations_list[l]] # not sureeeeee of l-1
             dAl = act_func(Zl,self.alpha).grad()
             dZl = np.multiply(dA_prev,dAl)
-            grads["dA" + str(l)] = np.dot(W.T,dZl)
-            grads["dW" + str(l + 1)] = np.dot(dZl,A_prev.T)/m
+            grads["dA" + str(l)] = np.matmul(W.T,dZl)
+            grads["dW" + str(l + 1)] = np.matmul(dZl,A_prev.T)/m
             grads["db" + str(l + 1)] = np.sum(dZl,axis=1,keepdims=True)/m
             
-            if penality == 'l2':
+            if self.penality == 'l2':
                 grads["dW" + str(l + 1)] += ((lamda * Wl)/m)
-            elif penality == 'l1':
+            elif self.penality == 'l1':
                 grads["dW" + str(l + 1)] += ((lamda * np.sign(Wl+DELTA))/m)
 
         return grads
@@ -463,6 +464,17 @@ class NeuralNetwork:
 
         return parameters
         
+    def model_performance(self, Y_pred, Y_true):
+        """ Evaluate the metrics to quantify the performance of the model.
+
+        Args:
+          - Y_pred (array/matrix): Predicted labels for batch of size m, shape (output_size,m)
+          - Y_true(array/matrix): Actual labels for batch of size m, shape (output_size,m)
+
+        Returns:
+        - metrics result (MSE or accurancy score)"""
+        raise NotImplementedError("Method NeuralNetwork.model_performance is abstract and cannot be called.")
+        
 
 ##################### NN_Regression #############################################
 class NN_Regression(NeuralNetwork):
@@ -471,8 +483,11 @@ class NN_Regression(NeuralNetwork):
         - cost function = MSE
         - predict = returns function prediction
     """
-    def cost_function(self,A, Y): #MSE
-          return mean_squared_error(A,Y)
+    def cost_function(self, AL, Y): #MSE
+          return (1./(2.*Y.shape[1]))*np.sum((AL-Y)**2) #mean_squared_error(A,Y)
+          
+    def model_performance(self, Y_pred, Y_true): #MSE
+        return self.cost_function(Y_pred, Y_true)
           
     def predict(self, X): #check!!!
         ''' Predicting values with FF (with no parameters optimization)
@@ -495,27 +510,56 @@ class NN_Classifier(NeuralNetwork):
         super().__init__(X)
         self.activations_list[-1] = 'softmax'
         
-    def cost_function(self,A, Y): # Cross_Entropy
-          return np.squeeze(-np.sum(np.multiply(np.log(A),Y))/Y.shape[1])
+    def cost_function(self,AL, Y): # Cross_Entropy
+          return np.squeeze(-np.sum(np.multiply(np.log(AL),Y))/Y.shape[1])
           
-    def predict(self, X, proba=False): #check!!!
+    def model_performance(self, Y_pred, Y_true):
+        """ Evaluate classification accuracy in range [0,1]."""
+        a = np.argmax(Y_pred,axis=0)
+        b = np.argmax(Y_true,axis=0)
+
+        correct = np.sum((a==b)*1)
+        total = a.size
+
+        return correct/total
+        
+    def to_one_hot(self, AL):
+        """ Convert softmax probabilities to label in one hot form.
+
+            Args:
+              - AL (array/matrix): predicted softmax probabilities for batch of size m, of shape (output_size,m)
+
+            Returns:
+              - Y_pred (array/matrix): predicted labels in one hot form for batch of size m, shape (output_size,m)"""
+
+        a = np.argmax(AL,axis=0)
+        b = np.zeros((AL.shape[0], a.size))
+        b[a,np.arange(a.size)] = 1
+        return b
+          
+    def predict(self, X, proba=False, one_hot=False): #check!!!
         ''' Predicting values (with no parameters optimization)
 
         Args:
             - X (array/matrix): input data of shape (input size, number of examples/feutures)
             - prob (bool): True - return function values
-                           False – return filtered best likelihood
+                           False – return index of max probability
+            - one_hot (bool): True - return index of max probability
+                              False – return predicted labels in the one hot form
             
         Returns:
             - Y (array/matrix): output values, as probability values or index (i.e. digit) of n_categories (Y columns).
         '''
         
-        out, _ = self.forward_propagation(X,self.hidden_layers,self.parameters,self.keep_proba,self.seed)
+        out, _ = self.forward_propagation(X)
         if proba == True:
             return out.T
         else:
             # Obtain prediction by taking the class with the highest likelihood
-            return np.argmax(out, axis=0) #check!!!
+            if one_hot == False:
+                return np.argmax(out, axis=0) #check!!!
+            else:
+                return self.to_one_hot(out)
 
 
     """
