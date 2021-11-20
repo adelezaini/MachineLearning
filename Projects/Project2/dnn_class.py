@@ -448,8 +448,8 @@ class DNNClassifier(object):
             
         for epoch_no in range(1,self.max_epoch+1):
             np.random.shuffle(idx)
-            X = X[idx,]
-            y = y[idx,]
+            X = X[:,idx]
+            y = y[:,idx]
             for i in range(0,M, self.batch_size):
                 self.iter_no = self.iter_no + 1
                 X_batch = X[:,i:i + self.batch_size]

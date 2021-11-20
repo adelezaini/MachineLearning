@@ -490,7 +490,7 @@ class NN_Regression(NeuralNetwork):
         return self.cost_function(Y_pred, Y_true)
           
     def predict(self, X): #check!!!
-        ''' Predicting values with FF (with no parameters optimization)
+        ''' Predicting values with FF 
 
         Args: X (array/matrix): input data of shape (input size, number of examples/feutures)
         Returns: Y (array/matrix): output values
