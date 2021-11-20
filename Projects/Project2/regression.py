@@ -24,7 +24,7 @@ from dataset import train_test_rescale
 from misc import MSE, R2
 from algorithm import SVDinv, SGD, GD
 from sklearn.utils import resample
-from activations import *
+from activation import *
     
 def MSE_BS(y_pred_matrix, y_data):
     return np.mean( np.mean((y_data.reshape(-1,1) - y_pred_matrix)**2, axis=1, keepdims=True) )
@@ -87,13 +87,14 @@ class LinearRegression:
         self.beta = GD(self.X_train, self.y_train, lmd=self.lmd, gradient=self.gradient, eta = eta, Niterations = Niterations)
         return self.beta
     
-    def fitSGD(self, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 'schedule', t0=5, t1=50, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
+    def fitSGD(self, n_epochs, M, opt = "SGD", eta0 = None, eta_type = 'static', t0=5, t1=50, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
         """Fit the model and return beta-values, using the Stochastic Gradient Descent.
         Description of the various paramentes in doc of SGD(). """
+
         self.beta = SGD(X = self.X_train, y = self.y_train, lmd=self.lmd, gradient = self.gradient, n_epochs = n_epochs, M = M, opt = opt, eta0 = eta0, eta_type = eta_type, t0 = t0, t1 = t1, momentum = momentum, rho = rho, b1 = b1, b2 = b2)
         return self.beta
         
-    def predictSGD_BS(self, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 'schedule', t0 = 5, t1 = 50, n_boostraps=100, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
+    def predictSGD_BS(self, n_epochs, M, opt = "SGD", eta0 = None, eta_type = 'static', t0 = 5, t1 = 50, n_boostraps=100, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
         """Predict y
         The Stochastic Gradient Descent and Bootstrap esampling algorithm are implemented
         
@@ -435,11 +436,10 @@ class LogisticRegression3:
         The Standard Gradient Descent has been implemented."""
         
     def __init__(self, X, y):
-    """Initialize the class.
+        """Initialize the class.
         Args:
           - X : n_datapoints with features to train, shape (n_feautures, n_datapoints)
-          - y : n_labels of all datapoints, shape (n_labels,)
-    """
+          - y : n_labels of all datapoints, shape (n_labels,)"""
         self.X = X
         self.y = y
     
@@ -487,11 +487,10 @@ class LogisticRegression2:
         The Standard Gradient Descent has been implemented."""
         
     def __init__(self, X, y):
-    """Initialize the class.
+        """Initialize the class.
         Args:
           - X : n_datapoints with features to train, shape (n_feautures, n_datapoints)
-          - y : n_labels of all datapoints, shape (n_labels,)
-    """
+          - y : n_labels of all datapoints, shape (n_labels,)"""
         self.X = X
         self.y = y
     
@@ -500,7 +499,7 @@ class LogisticRegression2:
         return self
         
     def loss(y, y_hat):
-    return -np.mean(y*(np.log(y_hat)) - (1-y)*np.log(1-y_hat))
+        return -np.mean(y*(np.log(y_hat)) - (1-y)*np.log(1-y_hat))
     
     def gradients(X, y, y_hat):
         
@@ -647,11 +646,10 @@ onehot_encoder = OneHotEncoder(sparse=False)
 class MultiClassifier:
 
     def __init__(self, X, y):
-    """Initialize the class.
+        """Initialize the class.
         Args:
           - X : n_datapoints with features to train, shape (n_feautures, n_datapoints)
-          - y : n_labels of all datapoints, shape (n_labels,)
-    """
+          - y : n_labels of all datapoints, shape (n_labels,)"""
         self.X = X
         self.y = y
 
@@ -701,15 +699,15 @@ class MultiClassifier:
     def fit(self):
             self.loss_steps, self.W = gradient_descent(self.X, self.Y)
 
-        def loss_plot(self):
-            return self.loss_steps.plot(
-                x='step',
-                y='loss',
-                xlabel='step',
-                ylabel='loss'
-            )
+    def loss_plot(self):
+        return self.loss_steps.plot(
+            x='step',
+            y='loss',
+            xlabel='step',
+            ylabel='loss'
+        )
 
-        def predict(self, H):
-            Z = - H @ self.W
-            P = softmax(Z, axis=1)
-            return np.argmax(P, axis=1)
+    def predict(self, H):
+        Z = - H @ self.W
+        P = softmax(Z, axis=1)
+        return np.argmax(P, axis=1)

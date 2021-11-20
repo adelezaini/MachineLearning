@@ -82,7 +82,7 @@ def gradient_of(function, *args, index = 0): # not tested
 def learning_schedule(t, t0=5, t1=50):
     return t0/(t+t1)
     
-def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 'schedule', t0=5, t1=50, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
+def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = None, eta_type = 'schedule', t0=5, t1=50, momentum = 0., rho = 0.9, b1 = 0.9, b2 = 0.999):
     """Stochastic Gradient Descent Algorithm
     
         Args:
@@ -125,6 +125,8 @@ def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 's
             eigvalues, eigvects = np.linalg.eig(H)
             eta_opt = 1.0/np.max(eigvalues)
             eta = eta_opt
+            if not eta0:
+                eta0=eta
             
             if eta_type == 'static':
                 eta = eta0
@@ -136,7 +138,7 @@ def SGD(X, y, lmd, gradient, n_epochs, M, opt = "SGD", eta0 = 0.1, eta_type = 's
             elif eta_type == 'hessian':
                 pass
                 
-            assert eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes."
+            #assert eta > eta_opt, "Learning rate higher than the inverse of the max eigenvalue of the Hessian matrix: SGD will not converge to the minimum. Need to set another learning rate or its paramentes."
             
             if opt == "SDG":
                 v = momentum * v - eta * gradients

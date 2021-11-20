@@ -16,6 +16,7 @@
 
 import numpy as np
 from random import random, seed
+import pandas as pd
 
 # Error analysis
 def R2(y_data, y_model):
@@ -29,6 +30,8 @@ def MSE(y_data,y_model):
 def find_min_indexes(A):
     return np.array(np.where(A == A.min())).flatten()
     
+def find_max_indexes(A):
+    return np.array(np.where(A == A.max())).flatten()
     
 def Rolling_Mean(vector, windows=3):
     """Evaluate the rolling mean of a vector
@@ -39,6 +42,11 @@ def Rolling_Mean(vector, windows=3):
     
     Returns:
     rolling mean of the given vector and two values at one sigma from the rolling average
+    
+    Usage:
+        y_rm, y_down, y_up = Rolling_Mean(y,2)
+        plt.plot(x, y_rm, color=color)
+        plt.fill_between(x, y_down, y_up, alpha=0.1, color=color)
     """
     vector_df = pd.DataFrame({'vector': vector})
     # computing the rolling average
