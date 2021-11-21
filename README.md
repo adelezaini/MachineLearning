@@ -17,18 +17,19 @@ Different techniques of Applied Data Analysis and Machine Learning are here expl
 ### Project1
 - *Topics:* Regression and resampling techniques (OLS, Ridge, Lasso Regression - Bootstrap and cross validation). Bias-variance analysis.
 - *Main contributors:* [Fridtjof Gjengset](https://github.com/fridtjrg), [Adele Zaini](https://github.com/adelezaini) and [Gaute Holen](https://github.com/GauteHolen) (have a look also at the [original repository](https://github.com/fridtjrg/FYS-STK4155)).
-- *Deadline:* 11 Oct 2021 (⚠️ POSTPONED: 13 Oct 2021⚠️)
+- *Deadline:* 11 Oct 2021 (POSTPONED: 13 Oct 2021)
 ### Project2
-- *Topics:* Stochastic Gradient Descent, Neural Network
-- *Deadline:* 15 Nov 2021
+- *Topics:* Stochastic Gradient Descent, Neural Network, Logistic Regression
+- *Contributor:* [Adele Zaini](https://github.com/adelezaini)
+- *Deadline:* 20 Nov 2021
 
 ### Project3
 - *Topics:* 
-- *Deadline:* 13 Dic 2021
+- *Deadline:* 17 Dic 2021
 
-📂 All the material is located on the ```projects``` directory, including the source codes and delivery reports (quick link here for the [```reports``` directory](https://github.com/fridtjrg/FYS-STK4155/tree/main/projects/reports)). In the ```projects``` directory, you can find a `README.md` file explaining the folder structure.
+📂 All the material is located on the ```Projects``` directory, including the source codes and delivery reports (quick link here for the [```reports``` directory](https://github.com/fridtjrg/FYS-STK4155/tree/main/projects/reports)). In the ```projects``` directory, you can find a `README.md` file explaining the folder structure.
 
-*Advise*: the Jupyter Notebook may not display properly when opened directly from Github , we suggest to download the file and open it locally.
+*Advise*: the Jupyter Notebooks may not display properly when opened directly from Github , we suggest to download the file and open them locally.
 
 Follow the [GitHub link](https://github.com/CompPhysics/MachineLearning) of the course for any further information.
 
