@@ -27,12 +27,6 @@ OPTIMIZERS = ['SGD', 'SGDM', 'ADAGRAD', 'RMS', 'ADAM']
 ETAS = ['static', 'schedule', 'invscaling', 'hessian']
 DELTA = 1e-8
 
-    
-# cost function
-# look at here : for cross entropy https://ml-cheatsheet.readthedocs.io/en/latest/loss_functions.html
-# derivative of cost function
-# predict -> logistic or linear . look at :https://github.com/UdiBhaskar/Deep-Learning/blob/master/DNN%20in%20python%20from%20scratch.ipynb
-
 
 class NeuralNetwork:
     """This class creates a Feed Forward Neural Network with the backpropagation algorithm.
