@@ -24,7 +24,8 @@ Different techniques of Applied Data Analysis and Machine Learning are here expl
 - *Deadline:* 20 Nov 2021
 
 ### Project3
-- *Topics:* 
+- *Topics:* Machine Learning Techniques comparison applied on a choosen dataset
+- *Contributor:* [Adele Zaini](https://github.com/adelezaini)
 - *Deadline:* 17 Dic 2021
 
 📂 All the material is located on the ```Projects``` directory, including the source codes and delivery reports (quick link here for the [```reports``` directory](https://github.com/fridtjrg/FYS-STK4155/tree/main/projects/reports)). In the ```projects``` directory, you can find a `README.md` file explaining the folder structure.
